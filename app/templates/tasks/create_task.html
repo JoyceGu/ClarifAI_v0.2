@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Submit New Requirement - ClarifAI{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="h2 mb-4">Submit New Requirement</h1>
+        
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('tasks.create_task') }}" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.title.label(class="form-label") }}
+                        {{ form.title(class="form-control") }}
+                        {% for error in form.title.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.priority.label(class="form-label") }}
+                        {{ form.priority(class="form-select") }}
+                        {% for error in form.priority.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.business_goal.label(class="form-label") }}
+                        {{ form.business_goal(class="form-control", rows="5", placeholder="Include your business objective and the relevant data dimensions (time range, geographic scope, user segments, etc.)") }}
+                        {% for error in form.business_goal.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.supporting_files.label(class="form-label") }}
+                        {{ form.supporting_files(class="form-control") }}
+                        <div class="form-text">You can upload multiple files.</div>
+                        {% for error in form.supporting_files.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.output_type.label(class="form-label") }}
+                        {{ form.output_type(class="form-select") }}
+                        {% for error in form.output_type.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.deadline.label(class="form-label") }}
+                        {{ form.deadline(class="form-control date-picker") }}
+                        {% for error in form.deadline.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ form.assignee_id.label(class="form-label") }}
+                        {{ form.assignee_id(class="form-select") }}
+                        {% for error in form.assignee_id.errors %}
+                            <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <button type="button" id="verify-btn" class="btn btn-success w-100">
+                                Verify Requirement
+                            </button>
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.submit(class="btn btn-primary w-100") }}
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 验证结果模态框 -->
+<div class="modal fade" id="verificationModal" tabindex="-1" aria-labelledby="verificationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="verificationModalLabel">Requirement Verification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-flex justify-content-center mb-3" id="verification-loading">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+                <div id="verification-result"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script>
+    // 初始化日期选择器
+    flatpickr(".date-picker", {
+        dateFormat: "Y-m-d",
+        minDate: "today"
+    });
+    
+    // 模拟验证功能
+    document.getElementById('verify-btn').addEventListener('click', function() {
+        const title = document.getElementById('title').value;
+        const business_goal = document.getElementById('business_goal').value;
+        
+        if (!title || !business_goal) {
+            alert('Please fill in the title and business goal fields before verification.');
+            return;
+        }
+        
+        // 显示验证模态框
+        const verificationModal = new bootstrap.Modal(document.getElementById('verificationModal'));
+        verificationModal.show();
+        
+        document.getElementById('verification-loading').style.display = 'flex';
+        document.getElementById('verification-result').innerHTML = '';
+        
+        // 模拟API调用延迟
+        setTimeout(function() {
+            document.getElementById('verification-loading').style.display = 'none';
+            document.getElementById('verification-result').innerHTML = `
+                <div class="alert alert-success">
+                    <h5>Verification Successful</h5>
+                    <p>The requirement is clear and feasible. No similar existing cases found.</p>
+                    <hr>
+                    <p class="mb-0"><strong>Suggestions:</strong> Consider adding more specific metrics or KPIs to measure success.</p>
+                </div>
+            `;
+        }, 2000);
+    });
+</script>
+{% endblock %}
