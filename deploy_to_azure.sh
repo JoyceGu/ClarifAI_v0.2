@@ -1,19 +1,28 @@
 #!/bin/bash
 # ClarifAI Azure部署脚本
 
+# 获取当前时间戳用于确保资源名称唯一性
+TIMESTAMP=$(date +%s)
+
 # 配置变量 - 请根据需要修改这些值
-RESOURCE_GROUP="clarifai-resources"
-LOCATION="westus3"  # 改为West US3
-APP_NAME="clarifai-app"
-SQL_SERVER_NAME="clarifai-sql-server"
+RESOURCE_GROUP="clarifai-app-v2-${TIMESTAMP}"
+LOCATION="westus"  # 改为westus，因为westus3可能有配额限制
+APP_NAME="clarifai-app-${TIMESTAMP}"
+SQL_SERVER_NAME="clarifai-sql-server-${TIMESTAMP}"
 SQL_DB_NAME="clarifaidb"
 SQL_ADMIN_USER="clarifaiadmin"
-SQL_ADMIN_PASSWORD="P@ssw0rd$(date +%s)"  # 自动生成随机密码
-STORAGE_ACCOUNT_NAME="clarifaistorage$(date +%s | sha1sum | head -c 8)"  # 确保唯一性
+SQL_ADMIN_PASSWORD="P@ssw0rd${TIMESTAMP}"  # 自动生成随机密码
+STORAGE_ACCOUNT_NAME="clarifaist$(date +%s | sha1sum | head -c 8)"  # 确保唯一性
 CONTAINER_NAME="file-uploads"
-OPENAI_NAME="clarifai-openai"
-INSIGHTS_NAME="clarifai-insights"
-KEYVAULT_NAME="clarifai-keyvault"
+OPENAI_NAME="clarifai-openai-${TIMESTAMP}"
+INSIGHTS_NAME="clarifai-insights-${TIMESTAMP}"
+KEYVAULT_NAME="clarifai-kv-${TIMESTAMP}"
+
+echo "Using the following resource names:"
+echo "Resource Group: $RESOURCE_GROUP"
+echo "App Name: $APP_NAME"
+echo "SQL Server: $SQL_SERVER_NAME"
+echo "Storage Account: $STORAGE_ACCOUNT_NAME"
 
 # 创建资源组
 echo "Creating resource group $RESOURCE_GROUP in $LOCATION..."
@@ -78,6 +87,10 @@ STORAGE_CONNECTION_STRING=$(az storage account show-connection-string \
     --query connectionString \
     --output tsv)
 
+# 安装必要的扩展
+echo "Installing required extensions..."
+az extension add --name application-insights --yes
+
 # 创建Application Insights
 echo "Creating Application Insights..."
 az monitor app-insights component create \
@@ -93,15 +106,17 @@ APPINSIGHTS_CONNECTION_STRING=$(az monitor app-insights component show \
     --query connectionString \
     --output tsv)
 
-# 创建Key Vault并为当前用户授权
+# 创建Key Vault并使用访问策略模式(非RBAC)
 echo "Creating Azure Key Vault..."
 USER_OBJECTID=$(az ad signed-in-user show --query id --output tsv)
 
 az keyvault create \
     --name $KEYVAULT_NAME \
     --resource-group $RESOURCE_GROUP \
-    --location $LOCATION
+    --location $LOCATION \
+    --enable-rbac-authorization false
 
+# 设置访问策略
 az keyvault set-policy \
     --name $KEYVAULT_NAME \
     --resource-group $RESOURCE_GROUP \
@@ -115,21 +130,26 @@ az keyvault secret set --vault-name $KEYVAULT_NAME --name "SqlConnectionString" 
 az keyvault secret set --vault-name $KEYVAULT_NAME --name "StorageConnectionString" --value "$STORAGE_CONNECTION_STRING"
 az keyvault secret set --vault-name $KEYVAULT_NAME --name "AppInsightsConnectionString" --value "$APPINSIGHTS_CONNECTION_STRING"
 
-# 创建App Service Plan
+# 创建App Service Plan - 使用F1免费套餐以避免配额问题
 echo "Creating App Service Plan..."
 az appservice plan create \
-    --name clarifai-service-plan \
+    --name clarifai-service-plan-${TIMESTAMP} \
     --resource-group $RESOURCE_GROUP \
     --location $LOCATION \
-    --sku B1
+    --sku F1 \
+    --is-linux
 
 # 创建Web App
 echo "Creating Web App..."
 az webapp create \
     --name $APP_NAME \
     --resource-group $RESOURCE_GROUP \
-    --plan clarifai-service-plan \
+    --plan clarifai-service-plan-${TIMESTAMP} \
     --runtime "PYTHON:3.9"
+
+# 确保Web App创建成功
+echo "Waiting for Web App to be ready..."
+sleep 30
 
 # 配置Web App设置
 echo "Configuring Web App settings..."
@@ -138,7 +158,7 @@ az webapp config set \
     --resource-group $RESOURCE_GROUP \
     --startup-file "gunicorn --bind=0.0.0.0 --workers=2 'run:app'"
 
-# 设置环境变量
+# 设置环境变量（在Web App中直接设置数据库和存储连接字符串，避免使用KeyVault引用）
 az webapp config appsettings set \
     --name $APP_NAME \
     --resource-group $RESOURCE_GROUP \
@@ -147,10 +167,10 @@ az webapp config appsettings set \
     FLASK_ENV=production \
     SECRET_KEY="$(openssl rand -hex 24)" \
     DATABASE_URL="mssql+pymssql://${SQL_ADMIN_USER}:${SQL_ADMIN_PASSWORD}@${SQL_SERVER_NAME}.database.windows.net:1433/${SQL_DB_NAME}" \
-    AZURE_STORAGE_CONNECTION_STRING="@Microsoft.KeyVault(SecretUri=https://${KEYVAULT_NAME}.vault.azure.net/secrets/StorageConnectionString/)" \
+    AZURE_STORAGE_CONNECTION_STRING="${STORAGE_CONNECTION_STRING}" \
     AZURE_STORAGE_CONTAINER_NAME=$CONTAINER_NAME \
     USE_AZURE_STORAGE=true \
-    APPLICATIONINSIGHTS_CONNECTION_STRING="@Microsoft.KeyVault(SecretUri=https://${KEYVAULT_NAME}.vault.azure.net/secrets/AppInsightsConnectionString/)" \
+    APPLICATIONINSIGHTS_CONNECTION_STRING="${APPINSIGHTS_CONNECTION_STRING}" \
     APPLICATIONINSIGHTS_ROLE_NAME=clarifai-webapp \
     AZURE_KEY_VAULT_URL="https://${KEYVAULT_NAME}.vault.azure.net/" \
     WEBSITE_MOUNT_ENABLED=1 \
@@ -170,16 +190,20 @@ APP_OBJECTID=$(az webapp identity show \
     --query principalId \
     --output tsv)
 
-# 授权Web App访问Key Vault
-echo "Granting Web App access to Key Vault..."
-az keyvault set-policy \
-    --name $KEYVAULT_NAME \
-    --resource-group $RESOURCE_GROUP \
-    --object-id $APP_OBJECTID \
-    --secret-permissions get list
+# 如果获取到了App的托管身份，授权Web App访问Key Vault
+if [ ! -z "$APP_OBJECTID" ]; then
+    echo "Granting Web App access to Key Vault..."
+    az keyvault set-policy \
+        --name $KEYVAULT_NAME \
+        --resource-group $RESOURCE_GROUP \
+        --object-id $APP_OBJECTID \
+        --secret-permissions get list
+else
+    echo "Warning: Could not retrieve Web App managed identity."
+fi
 
 echo "Deployment setup complete! Now you can deploy your code using the following command:"
-echo "az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --src clarifai_app.zip"
+echo "az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --src deployment/clarifai_app.zip"
 echo ""
 echo "Resource Group: $RESOURCE_GROUP"
 echo "App Name: $APP_NAME"

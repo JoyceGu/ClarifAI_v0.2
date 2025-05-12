@@ -38,9 +38,6 @@ def create_app(config_name='default'):
     migrate.init_app(app, db)
     login_manager.init_app(app)
     
-    # 根据环境初始化Azure服务
-    init_azure_services(app)
-    
     # 注册模板过滤器
     from app.utils.template_filters import filters_bp
     app.register_blueprint(filters_bp)
@@ -62,6 +59,9 @@ def create_app(config_name='default'):
     from app.routes.errors import errors as errors_blueprint
     app.register_blueprint(errors_blueprint)
     
+    # 根据环境初始化Azure服务
+    init_azure_services(app)
+    
     return app
 
 def init_azure_services(app):
@@ -69,51 +69,65 @@ def init_azure_services(app):
     # 初始化Azure Application Insights
     if app.config.get('APPLICATIONINSIGHTS_CONNECTION_STRING'):
         try:
-            from opencensus.ext.azure.log_exporter import AzureLogHandler
-            from opencensus.ext.azure.trace_exporter import AzureExporter
-            from opencensus.ext.flask.flask_middleware import FlaskMiddleware
-            from opencensus.trace.samplers import ProbabilitySampler
-            from opencensus.trace.tracer import Tracer
-            
-            # 设置Azure Application Insights日志处理器
-            azure_handler = AzureLogHandler(
-                connection_string=app.config['APPLICATIONINSIGHTS_CONNECTION_STRING']
-            )
-            azure_handler.setLevel(logging.INFO)
-            app.logger.addHandler(azure_handler)
-            
-            # 设置Azure Application Insights分布式追踪
-            global azure_insights_middleware, app_insights_tracer
-            azure_insights_middleware = FlaskMiddleware(
-                app,
-                exporter=AzureExporter(connection_string=app.config['APPLICATIONINSIGHTS_CONNECTION_STRING']),
-                sampler=ProbabilitySampler(rate=1.0),
-            )
-            app_insights_tracer = Tracer(
-                exporter=AzureExporter(connection_string=app.config['APPLICATIONINSIGHTS_CONNECTION_STRING']),
-                sampler=ProbabilitySampler(rate=1.0),
-            )
-            
-            app.logger.info("Azure Application Insights initialized")
-        except ImportError:
-            app.logger.warning("Azure Application Insights 依赖未安装，跳过初始化")
+            # 在需要时才导入，避免循环依赖问题
+            try:
+                from opencensus.ext.azure.log_exporter import AzureLogHandler
+                from opencensus.ext.azure.trace_exporter import AzureExporter
+                from opencensus.ext.flask.flask_middleware import FlaskMiddleware
+                from opencensus.trace.samplers import ProbabilitySampler
+                from opencensus.trace.tracer import Tracer
+                
+                # 设置Azure Application Insights日志处理器
+                azure_handler = AzureLogHandler(
+                    connection_string=app.config['APPLICATIONINSIGHTS_CONNECTION_STRING']
+                )
+                azure_handler.setLevel(logging.INFO)
+                app.logger.addHandler(azure_handler)
+                
+                # 设置Azure Application Insights分布式追踪
+                global azure_insights_middleware, app_insights_tracer
+                azure_insights_middleware = FlaskMiddleware(
+                    app,
+                    exporter=AzureExporter(connection_string=app.config['APPLICATIONINSIGHTS_CONNECTION_STRING']),
+                    sampler=ProbabilitySampler(rate=1.0),
+                )
+                app_insights_tracer = Tracer(
+                    exporter=AzureExporter(connection_string=app.config['APPLICATIONINSIGHTS_CONNECTION_STRING']),
+                    sampler=ProbabilitySampler(rate=1.0),
+                )
+                
+                app.logger.info("Azure Application Insights initialized")
+            except ImportError:
+                app.logger.warning("Azure Application Insights 依赖未安装，跳过初始化")
+        except Exception as e:
+            app.logger.error(f"Azure Application Insights 初始化失败: {str(e)}")
     
     # 初始化Microsoft Entra ID
     if app.config.get('ENTRA_CLIENT_ID') and app.config.get('ENTRA_CLIENT_SECRET'):
         try:
+            # 避免在应用启动时导入azure_auth，以防止循环引用
             from app.utils.azure_auth import EntraIDAuthProvider
             global entra_id_provider
-            entra_id_provider = EntraIDAuthProvider(app)
-            app.logger.info("Microsoft Entra ID integration initialized")
+            
+            try:
+                entra_id_provider = EntraIDAuthProvider(app)
+                app.logger.info("Microsoft Entra ID integration initialized")
+            except Exception as e:
+                app.logger.error(f"Microsoft Entra ID 初始化失败: {str(e)}")
+                entra_id_provider = None
         except ImportError:
             app.logger.warning("Microsoft Entra ID 依赖未安装，跳过初始化")
     
     # 初始化Azure Storage（仅在生产模式下使用）
     if app.config.get('USE_AZURE_STORAGE') and app.config.get('AZURE_STORAGE_CONNECTION_STRING'):
         try:
-            from app.utils.azure_storage import init_blob_service
-            init_blob_service(app)
-            app.logger.info("Azure Blob Storage initialized")
+            # 同样，这里延迟导入避免循环依赖
+            try:
+                from app.utils.azure_storage import init_blob_service
+                init_blob_service(app)
+                app.logger.info("Azure Blob Storage initialized")
+            except Exception as e:
+                app.logger.error(f"Azure Blob Storage 初始化失败: {str(e)}")
         except ImportError:
             app.logger.warning("Azure Blob Storage 依赖未安装，跳过初始化")
 
