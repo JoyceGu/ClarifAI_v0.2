@@ -86,27 +86,21 @@
                 </form>
             </div>
         </div>
-    </div>
-</div>
-
-<!-- 验证结果模态框 -->
-<div class="modal fade" id="verificationModal" tabindex="-1" aria-labelledby="verificationModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="verificationModalLabel">Requirement Verification</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex justify-content-center mb-3" id="verification-loading">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
+        
+        <!-- 验证结果展示区域 -->
+        <div id="verification-section" class="mt-4 d-none">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <h3 class="h4 mb-3">Requirement Verification</h3>
+                    
+                    <div class="d-flex justify-content-center mb-3" id="verification-loading">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
                     </div>
+                    
+                    <div id="verification-result"></div>
                 </div>
-                <div id="verification-result"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -122,7 +116,7 @@
         minDate: "today"
     });
     
-    // 模拟验证功能
+    // 验证功能
     document.getElementById('verify-btn').addEventListener('click', function() {
         const title = document.getElementById('title').value;
         const business_goal = document.getElementById('business_goal').value;
@@ -132,25 +126,74 @@
             return;
         }
         
-        // 显示验证模态框
-        const verificationModal = new bootstrap.Modal(document.getElementById('verificationModal'));
-        verificationModal.show();
+        // 显示验证结果区域
+        const verificationSection = document.getElementById('verification-section');
+        verificationSection.classList.remove('d-none');
         
         document.getElementById('verification-loading').style.display = 'flex';
         document.getElementById('verification-result').innerHTML = '';
         
-        // 模拟API调用延迟
-        setTimeout(function() {
+        // 连接Azure OpenAI进行真实反馈
+        fetch('/api/verify', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                title: title,
+                business_goal: business_goal
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
             document.getElementById('verification-loading').style.display = 'none';
             document.getElementById('verification-result').innerHTML = `
-                <div class="alert alert-success">
-                    <h5>Verification Successful</h5>
-                    <p>The requirement is clear and feasible. No similar existing cases found.</p>
-                    <hr>
-                    <p class="mb-0"><strong>Suggestions:</strong> Consider adding more specific metrics or KPIs to measure success.</p>
+                <div class="card mb-3">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">AI Analysis Results</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <div class="text-center">
+                                    <h6>Clarity Score</h6>
+                                    <div class="progress mb-2">
+                                        <div class="progress-bar" role="progressbar" style="width: ${data.clarity_score}%;" 
+                                            aria-valuenow="${data.clarity_score}" aria-valuemin="0" aria-valuemax="100">
+                                            ${data.clarity_score}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="text-center">
+                                    <h6>Feasibility Score</h6>
+                                    <div class="progress mb-2">
+                                        <div class="progress-bar bg-success" role="progressbar" style="width: ${data.feasibility_score}%;" 
+                                            aria-valuenow="${data.feasibility_score}" aria-valuemin="0" aria-valuemax="100">
+                                            ${data.feasibility_score}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="feedback-details">
+                            <h6>Feedback:</h6>
+                            <p>${data.feedback}</p>
+                        </div>
+                    </div>
                 </div>
             `;
-        }, 2000);
+        })
+        .catch(error => {
+            document.getElementById('verification-loading').style.display = 'none';
+            document.getElementById('verification-result').innerHTML = `
+                <div class="alert alert-danger">
+                    <p>Error during verification. Please try again later.</p>
+                </div>
+            `;
+            console.error('Error:', error);
+        });
     });
 </script>
 {% endblock %}

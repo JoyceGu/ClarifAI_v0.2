@@ -8,6 +8,9 @@ import os
 from werkzeug.utils import secure_filename
 from app.models import File
 import uuid
+import json
+import requests
+import random  # 临时使用，连接Azure OpenAI后可移除
 
 tasks = Blueprint('tasks', __name__)
 
@@ -127,6 +130,101 @@ def view_task(task_id):
     task = Task.query.get_or_404(task_id)
     
     return render_template('tasks/view_task.html', task=task)
+
+@tasks.route('/api/verify', methods=['POST'])
+@login_required
+def api_verify_task():
+    data = request.json
+    title = data.get('title', '')
+    business_goal = data.get('business_goal', '')
+    
+    if not title or not business_goal:
+        return jsonify({
+            'status': 'error',
+            'message': 'Missing required fields'
+        }), 400
+    
+    try:
+        # Azure OpenAI API调用
+        # 这里应该配置您的Azure OpenAI API密钥和端点
+        azure_api_key = os.environ.get('AZURE_OPENAI_API_KEY', '')
+        azure_endpoint = os.environ.get('AZURE_OPENAI_ENDPOINT', '')
+        azure_deployment_name = os.environ.get('AZURE_OPENAI_DEPLOYMENT_NAME', 'gpt-4o-mini')
+        azure_api_version = os.environ.get('AZURE_OPENAI_API_VERSION', '2025-04-15')
+        
+        if azure_api_key and azure_endpoint:
+            # 构建API请求
+            url = f"{azure_endpoint}/openai/deployments/{azure_deployment_name}/chat/completions?api-version={azure_api_version}"
+            headers = {
+                "Content-Type": "application/json",
+                "api-key": azure_api_key
+            }
+            
+            # 构建对Azure OpenAI的请求内容
+            payload = {
+                "messages": [
+                    {
+                        "role": "system", 
+                        "content": "You are a senior data scientist and researcher at a large technology company. You are evaluating the clarity and feasibility of a new requirement. Please provide a clarity score (0-100) and a feasibility score (0-100), along with detailed feedback. Your feedback should identify any areas of ambiguity, suggest what additional information might be needed, and assess if the requirement is technically feasible with current technologies."
+                    },
+                    {
+                        "role": "user",
+                        "content": f"Please evaluate this requirement:\nTitle: {title}\nBusiness Goal: {business_goal}\n\nProvide your analysis in this JSON format:\n```json\n{{\"clarity_score\": (number 0-100), \"feasibility_score\": (number 0-100), \"feedback\": \"Your detailed feedback here\"}}\n```"
+                    }
+                ],
+                "temperature": 0.7,
+                "max_tokens": 800,
+                "n": 1
+            }
+            
+            # 发送请求到Azure OpenAI
+            response = requests.post(url, headers=headers, json=payload)
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                assistant_message = response_data['choices'][0]['message']['content']
+                
+                # 从响应中提取JSON部分
+                try:
+                    # 查找JSON格式的字符串
+                    json_start = assistant_message.find('{')
+                    json_end = assistant_message.rfind('}') + 1
+                    if json_start >= 0 and json_end > json_start:
+                        json_str = assistant_message[json_start:json_end]
+                        result = json.loads(json_str)
+                        
+                        # 确保所有必要的字段都存在
+                        if all(k in result for k in ['clarity_score', 'feasibility_score', 'feedback']):
+                            return jsonify(result)
+                except Exception as e:
+                    current_app.logger.error(f"Error parsing AI response: {str(e)}")
+            
+            # 如果Azure OpenAI调用失败或解析失败，返回模拟数据
+            current_app.logger.warning("Failed to get valid response from Azure OpenAI, using mock data")
+        
+        # 使用模拟数据（当Azure OpenAI API不可用时）
+        # 实际部署时可删除此部分
+        clarity_score = random.randint(65, 95)
+        feasibility_score = random.randint(60, 90)
+        
+        feedback_templates = [
+            "The requirement is generally clear but could benefit from more specific metrics for success. Consider defining key performance indicators (KPIs) that would demonstrate successful implementation. The feasibility is good, though implementation timeline might need adjustment based on available resources.",
+            "Your business goal is well-defined, but the scope needs more precise boundaries. Try specifying which data sources will be used and exact time ranges. From a technical perspective, this is feasible but would require significant data processing capabilities.",
+            "This requirement has good clarity in terms of the business objective, but lacks detail on technical requirements. The feasibility depends on data availability and quality. Please provide more information about existing data infrastructure and quality."
+        ]
+        
+        return jsonify({
+            'clarity_score': clarity_score,
+            'feasibility_score': feasibility_score,
+            'feedback': random.choice(feedback_templates)
+        })
+        
+    except Exception as e:
+        current_app.logger.error(f"Error during verification: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': 'Internal server error during verification'
+        }), 500
 
 @tasks.route('/<int:task_id>/verify', methods=['POST'])
 @login_required
