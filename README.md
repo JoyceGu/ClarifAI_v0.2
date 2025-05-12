@@ -225,6 +225,37 @@ https://clarifai-app.azurewebsites.net
    az webapp restart --name $APP_NAME --resource-group $RESOURCE_GROUP
    ```
 
+### Deployment Optimization
+
+If experiencing slow deployment times, consider the following optimizations:
+
+1. **Reduce deployment package size**:
+   - Exclude unnecessary files using a `.deployignore` file
+   - Remove static assets that can be served from a CDN
+   - Use `.gitignore` patterns to exclude test files and development-only dependencies
+
+2. **Optimize dependencies**:
+   - Review and remove unused packages from `requirements.txt`
+   - Use `pip-compile` to create a pinned requirements file to speed up installation
+   - Consider using a custom Docker container with pre-installed dependencies
+
+3. **Optimize App Service Plan**:
+   - Upgrade from F1 free tier to a B1 or higher tier for faster deployments
+   - Enable local cache for the App Service to reduce cold starts
+   - Use deployment slots for zero-downtime deployments
+
+4. **Enable build optimization**:
+   - Set `SCM_DO_BUILD_DURING_DEPLOYMENT=true` in App Service configuration
+   - Create a custom deployment script in `.deployment` file
+   - Leverage Azure DevOps pipelines for more control over the build process
+
+5. **Monitor deployment performance**:
+   - Use the Azure CLI to get detailed deployment logs:
+     ```bash
+     az webapp log download --resource-group $RESOURCE_GROUP --name $APP_NAME
+     ```
+   - Check for timeout issues or resource constraints during deployment
+
 ## Roadmap
 
 1. Basic features (authentication, task management, file upload)

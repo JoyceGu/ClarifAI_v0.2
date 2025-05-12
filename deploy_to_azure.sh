@@ -1,5 +1,7 @@
 #!/bin/bash
-# ClarifAI Azure部署脚本
+# ClarifAI Azure部署脚本 - 优化版本
+
+echo "======== ClarifAI Azure部署脚本 - 优化版本 ========"
 
 # 获取当前时间戳用于确保资源名称唯一性
 TIMESTAMP=$(date +%s)
@@ -130,13 +132,13 @@ az keyvault secret set --vault-name $KEYVAULT_NAME --name "SqlConnectionString" 
 az keyvault secret set --vault-name $KEYVAULT_NAME --name "StorageConnectionString" --value "$STORAGE_CONNECTION_STRING"
 az keyvault secret set --vault-name $KEYVAULT_NAME --name "AppInsightsConnectionString" --value "$APPINSIGHTS_CONNECTION_STRING"
 
-# 创建App Service Plan - 使用F1免费套餐以避免配额问题
+# 创建App Service Plan - 使用B1 Basic套餐以获得更好的性能
 echo "Creating App Service Plan..."
 az appservice plan create \
     --name clarifai-service-plan-${TIMESTAMP} \
     --resource-group $RESOURCE_GROUP \
     --location $LOCATION \
-    --sku F1 \
+    --sku B1 \
     --is-linux
 
 # 创建Web App
@@ -158,7 +160,25 @@ az webapp config set \
     --resource-group $RESOURCE_GROUP \
     --startup-file "gunicorn --bind=0.0.0.0 --workers=2 'run:app'"
 
-# 设置环境变量（在Web App中直接设置数据库和存储连接字符串，避免使用KeyVault引用）
+# 启用本地缓存以提高性能和构建速度
+echo "Enabling Local Cache for better performance..."
+az webapp config appsettings set \
+    --name $APP_NAME \
+    --resource-group $RESOURCE_GROUP \
+    --settings WEBSITE_LOCAL_CACHE_OPTION=Always
+
+# 优化构建设置
+echo "Optimizing build settings..."
+az webapp config appsettings set \
+    --name $APP_NAME \
+    --resource-group $RESOURCE_GROUP \
+    --settings \
+    SCM_DO_BUILD_DURING_DEPLOYMENT=true \
+    ENABLE_ORYX_BUILD=true \
+    PRE_BUILD_COMMAND="pip install --upgrade pip pip-tools" \
+    POST_BUILD_COMMAND="flask db upgrade"
+
+# 设置环境变量
 az webapp config appsettings set \
     --name $APP_NAME \
     --resource-group $RESOURCE_GROUP \
@@ -202,8 +222,34 @@ else
     echo "Warning: Could not retrieve Web App managed identity."
 fi
 
+# 创建部署槽位，可用于零停机部署
+echo "Creating a staging deployment slot..."
+az webapp deployment slot create \
+    --name $APP_NAME \
+    --resource-group $RESOURCE_GROUP \
+    --slot staging
+
+# 配置部署槽位设置
+az webapp config set \
+    --name $APP_NAME \
+    --resource-group $RESOURCE_GROUP \
+    --slot staging \
+    --startup-file "gunicorn --bind=0.0.0.0 --workers=2 'run:app'"
+
+# 复制应用程序设置到部署槽位
+az webapp config appsettings set \
+    --name $APP_NAME \
+    --resource-group $RESOURCE_GROUP \
+    --slot staging \
+    --settings $(az webapp config appsettings list --name $APP_NAME --resource-group $RESOURCE_GROUP --query "[].{name:name, value:value}" --output tsv | sed 's/\t/=/' | tr '\n' ' ')
+
+echo "======== 优化部署设置完成 ========"
 echo "Deployment setup complete! Now you can deploy your code using the following command:"
 echo "az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --src deployment/clarifai_app.zip"
+echo ""
+echo "或者使用部署槽位进行零停机部署:"
+echo "az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --slot staging --src deployment/clarifai_app.zip"
+echo "az webapp deployment slot swap --resource-group $RESOURCE_GROUP --name $APP_NAME --slot staging --target-slot production"
 echo ""
 echo "Resource Group: $RESOURCE_GROUP"
 echo "App Name: $APP_NAME"
@@ -213,4 +259,4 @@ echo "Storage Account: $STORAGE_ACCOUNT_NAME"
 echo "Application Insights: $INSIGHTS_NAME"
 echo "Key Vault: $KEYVAULT_NAME"
 echo ""
-echo "Please update your .env file with Azure OpenAI and Microsoft Entra ID settings manually." 
+echo "请更新您的.env文件，手动配置Azure OpenAI和Microsoft Entra ID设置。" 

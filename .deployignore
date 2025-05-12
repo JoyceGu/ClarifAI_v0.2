@@ -1,0 +1,72 @@
+# 排除本地开发和测试文件
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 版本控制
+.git/
+.gitignore
+.gitattributes
+
+# IDE和编辑器文件
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 测试相关
+tests/
+pytest.ini
+.coverage
+htmlcov/
+.pytest_cache/
+
+# 文档和非必要文件
+docs/
+*.md
+LICENSE
+*.txt
+!requirements.txt
+
+# 本地开发配置
+.env
+.env.example
+instance/
+
+# 静态资源临时文件
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+
+# 虚拟环境
+venv/
+ENV/
+
+# 脚本和工具
+*.sh
+*.bat
+*.cmd
+
+# 日志文件
+*.log
+
+# Azure部署文件夹（避免递归）
+deployment/ 
