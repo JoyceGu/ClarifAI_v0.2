@@ -1,61 +1,74 @@
-# ClarifAI - 智能任务管理平台
+# ClarifAI - Intelligent Task Management Platform
 
-ClarifAI是一个基于Python Flask的任务管理平台，集成了Azure OpenAI能力，提供任务提交、验证、分配和跟踪功能。
+ClarifAI is a Python Flask-based task management platform integrated with Azure OpenAI, providing task submission, validation, assignment, and tracking features.
 
-## 核心功能
+## Core Features
 
-1. **用户认证系统**
-   - 登录/注册
-   - 与Microsoft Entra ID集成（计划中）
+1. **User Authentication System**
+   - Login/Registration
+   - Integration with Microsoft Entra ID (Azure AD)
 
-2. **任务管理**
-   - 提交新任务/需求
-   - 分配任务给团队成员
-   - 追踪分配给自己的任务
-   - 任务历史记录查看
+2. **Task Management**
+   - Submit new tasks/requirements
+   - Assign tasks to team members
+   - Track tasks assigned to yourself
+   - View task history
 
-3. **智能任务验证**
-   - 使用Azure OpenAI验证任务的清晰度/可行性
-   - 检查是否存在类似案例（通过知识库API）
+3. **Intelligent Task Validation**
+   - Use Azure OpenAI to validate task clarity and feasibility
+   - Check for similar cases (via Knowledge Base API)
 
-4. **文件管理**
-   - 文件上传/存储空间
-   - 文件探索和管理界面
+4. **File Management**
+   - File upload/storage
+   - File explorer and management interface
 
-## 技术栈
+## Technology Stack
 
-- **后端**: Python Flask
-- **前端**: HTML, CSS, JavaScript (Bootstrap)
-- **数据库**: SQLite (开发), PostgreSQL (生产)
-- **认证**: Flask-Login (本地), Microsoft Entra ID (Azure部署)
-- **AI集成**: Azure OpenAI
-- **云部署**: Azure App Service
+- **Backend**: Python Flask
+- **Frontend**: HTML, CSS, JavaScript (Bootstrap)
+- **Database**: SQLite (development), PostgreSQL (production)
+- **Authentication**: Flask-Login (local), Microsoft Entra ID (Azure deployment)
+- **AI Integration**: Azure OpenAI
+- **Cloud Deployment**: Azure App Service
 
-## 安装说明
+## Azure Services Used
 
-1. 克隆代码库
+This application leverages the following Azure services:
+
+- **Azure App Service**: Hosts the web application.
+- **Azure SQL Database**: Stores production data.
+- **Azure Blob Storage**: Stores uploaded files and documents.
+- **Azure OpenAI Service**: Provides AI-powered task validation and analysis.
+- **Microsoft Entra ID (Azure AD)**: Provides secure authentication and single sign-on.
+- **Azure Key Vault**: Securely stores secrets and connection strings.
+- **Azure Application Insights**: Monitors application health and logs.
+- **App Service Plan**: Defines the compute resources for the web app.
+
+## Installation Guide
+
+1. Clone the repository
 
 ```bash
 git clone [repository-url]
 cd ClarifAI_v0.2
 ```
 
-2. 创建并激活虚拟环境
+2. Create and activate a virtual environment
 
 ```bash
 python -m venv venv
 source venv/bin/activate  # MacOS/Linux
-# 或者
+# or
 venv\Scripts\activate  # Windows
 ```
 
-3. 安装依赖
+3. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-4. 初始化数据库
+4. Initialize the database
 
 ```bash
 flask db init
@@ -63,19 +76,19 @@ flask db migrate
 flask db upgrade
 ```
 
-5. 运行应用
+5. Run the application
 
 ```bash
 flask run --port=8000
 ```
 
-6. 在浏览器中访问应用
+6. Access the application in your browser
 
 ```
 http://localhost:8000
 ```
 
-## 项目结构
+## Project Structure
 
 ```
 ClarifAI/
@@ -98,63 +111,63 @@ ClarifAI/
 └── README.md
 ```
 
-## Azure部署指南
+## Azure Deployment Guide
 
-### 前提条件
+### Prerequisites
 
-1. Azure账户
-2. 已安装Azure CLI
-3. 本地已配置的项目
+1. Azure account
+2. Azure CLI installed
+3. Project configured locally
 
-### 部署步骤
+### Deployment Steps
 
-#### 1. 配置Azure服务
+#### 1. Configure Azure Services
 
-运行提供的部署脚本，创建所需Azure资源：
+Run the provided deployment script to create required Azure resources:
 
 ```bash
-# 确保脚本有执行权限
+# Ensure the script is executable
 chmod +x deploy_to_azure.sh
-# 运行部署脚本
+# Run the deployment script
 ./deploy_to_azure.sh
 ```
 
-这个脚本会自动创建以下Azure资源：
-- 资源组
-- Azure SQL Server和数据库
+This script will automatically create the following Azure resources:
+- Resource Group
+- Azure SQL Server and Database
 - Azure Blob Storage
 - Application Insights
 - Azure Key Vault
 - App Service Plan
 - Web App
 
-#### 2. 准备部署包
+#### 2. Prepare the Deployment Package
 
-运行以下命令创建部署包：
+Run the following command to create the deployment package:
 
 ```bash
-# 确保脚本有执行权限
+# Ensure the script is executable
 chmod +x prepare_deploy_package.sh
-# 创建部署包
+# Create the deployment package
 ./prepare_deploy_package.sh
 ```
 
-#### 3. 部署应用程序
+#### 3. Deploy the Application
 
 ```bash
-# 替换为您的资源组和应用名称
+# Replace with your resource group and app name
 RESOURCE_GROUP="clarifai-resources"
 APP_NAME="clarifai-app"
 
-# 部署到Azure
+# Deploy to Azure
 az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --src deployment/clarifai_app.zip
 ```
 
-#### 4. 配置Azure OpenAI和Microsoft Entra ID
+#### 4. Configure Azure OpenAI and Microsoft Entra ID
 
-1. **Azure OpenAI配置**
+1. **Azure OpenAI Configuration**
 
-   在Azure Portal中创建Azure OpenAI资源，然后更新应用设置：
+   Create an Azure OpenAI resource in the Azure Portal, then update the app settings:
    
    ```bash
    az webapp config appsettings set \
@@ -167,9 +180,9 @@ az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $
        AZURE_OPENAI_API_VERSION="2025-04-15"
    ```
 
-2. **Microsoft Entra ID配置**
+2. **Microsoft Entra ID Configuration**
 
-   在Azure Portal的Entra ID中注册新应用，然后更新应用设置：
+   Register a new application in Entra ID (Azure AD) via the Azure Portal, then update the app settings:
    
    ```bash
    az webapp config appsettings set \
@@ -182,45 +195,45 @@ az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $
        ENTRA_REDIRECT_PATH="/auth/callback"
    ```
 
-#### 5. 完成部署
+#### 5. Complete Deployment
 
-部署完成后，您可以访问Azure Web App URL查看您的应用：
+After deployment, you can access your app at the Azure Web App URL:
 
 ```
 https://clarifai-app.azurewebsites.net
 ```
 
-#### 6. 部署后操作
+#### 6. Post-Deployment Operations
 
-1. 运行数据库迁移（这在启动脚本中已自动执行）
-2. 通过Azure Portal监控应用性能
+1. Run database migrations (automatically executed in the startup script)
+2. Monitor application performance via Azure Portal
 
-### 故障排除
+### Troubleshooting
 
-1. **查看应用日志**：
+1. **View application logs**:
    ```bash
    az webapp log tail --name $APP_NAME --resource-group $RESOURCE_GROUP
    ```
 
-2. **检查部署状态**：
+2. **Check deployment status**:
    ```bash
    az webapp deployment list --name $APP_NAME --resource-group $RESOURCE_GROUP
    ```
 
-3. **重启应用**：
+3. **Restart the application**:
    ```bash
    az webapp restart --name $APP_NAME --resource-group $RESOURCE_GROUP
    ```
 
-## 开发路线图
+## Roadmap
 
-1. 基础功能实现（认证、任务管理、文件上传）
-2. Azure OpenAI集成
-3. Microsoft Entra ID集成
-4. 知识库API集成
-5. Azure部署配置
+1. Basic features (authentication, task management, file upload)
+2. Azure OpenAI integration
+3. Microsoft Entra ID integration
+4. Knowledge Base API integration
+5. Azure deployment configuration
 
-## 测试账号
+## Test Accounts
 
 - PM: pm@test.com / password123
 - Researcher: researcher@test.com / password123 
