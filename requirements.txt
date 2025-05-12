@@ -14,4 +14,16 @@ requests==2.31.0
 gunicorn==21.2.0
 python-dateutil==2.8.2
 WTForms==3.1.1
-Flask-Bcrypt==1.0.1 
+Flask-Bcrypt==1.0.1
+
+# Azure服务依赖
+azure-storage-blob==12.19.0
+psycopg2-binary==2.9.9
+azure-monitor-opentelemetry==1.2.0
+azure-identity==1.15.0
+msal==1.26.0
+msal-extensions==1.0.0
+azure-keyvault-secrets==4.7.0
+azure-appconfiguration==1.5.0
+opencensus-ext-azure==1.1.9
+opencensus-ext-flask==0.8.2 

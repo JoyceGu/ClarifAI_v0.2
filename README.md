@@ -98,6 +98,120 @@ ClarifAI/
 └── README.md
 ```
 
+## Azure部署指南
+
+### 前提条件
+
+1. Azure账户
+2. 已安装Azure CLI
+3. 本地已配置的项目
+
+### 部署步骤
+
+#### 1. 配置Azure服务
+
+运行提供的部署脚本，创建所需Azure资源：
+
+```bash
+# 确保脚本有执行权限
+chmod +x deploy_to_azure.sh
+# 运行部署脚本
+./deploy_to_azure.sh
+```
+
+这个脚本会自动创建以下Azure资源：
+- 资源组
+- Azure SQL Server和数据库
+- Azure Blob Storage
+- Application Insights
+- Azure Key Vault
+- App Service Plan
+- Web App
+
+#### 2. 准备部署包
+
+运行以下命令创建部署包：
+
+```bash
+# 确保脚本有执行权限
+chmod +x prepare_deploy_package.sh
+# 创建部署包
+./prepare_deploy_package.sh
+```
+
+#### 3. 部署应用程序
+
+```bash
+# 替换为您的资源组和应用名称
+RESOURCE_GROUP="clarifai-resources"
+APP_NAME="clarifai-app"
+
+# 部署到Azure
+az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --src deployment/clarifai_app.zip
+```
+
+#### 4. 配置Azure OpenAI和Microsoft Entra ID
+
+1. **Azure OpenAI配置**
+
+   在Azure Portal中创建Azure OpenAI资源，然后更新应用设置：
+   
+   ```bash
+   az webapp config appsettings set \
+       --name $APP_NAME \
+       --resource-group $RESOURCE_GROUP \
+       --settings \
+       AZURE_OPENAI_API_KEY="your-api-key" \
+       AZURE_OPENAI_ENDPOINT="https://your-resource-name.openai.azure.com/" \
+       AZURE_OPENAI_DEPLOYMENT_NAME="gpt-4o-mini" \
+       AZURE_OPENAI_API_VERSION="2025-04-15"
+   ```
+
+2. **Microsoft Entra ID配置**
+
+   在Azure Portal的Entra ID中注册新应用，然后更新应用设置：
+   
+   ```bash
+   az webapp config appsettings set \
+       --name $APP_NAME \
+       --resource-group $RESOURCE_GROUP \
+       --settings \
+       ENTRA_CLIENT_ID="your-client-id" \
+       ENTRA_CLIENT_SECRET="your-client-secret" \
+       ENTRA_TENANT_ID="your-tenant-id" \
+       ENTRA_REDIRECT_PATH="/auth/callback"
+   ```
+
+#### 5. 完成部署
+
+部署完成后，您可以访问Azure Web App URL查看您的应用：
+
+```
+https://clarifai-app.azurewebsites.net
+```
+
+#### 6. 部署后操作
+
+1. 运行数据库迁移（这在启动脚本中已自动执行）
+2. 通过Azure Portal监控应用性能
+
+### 故障排除
+
+1. **查看应用日志**：
+   ```bash
+   az webapp log tail --name $APP_NAME --resource-group $RESOURCE_GROUP
+   ```
+
+2. **检查部署状态**：
+   ```bash
+   az webapp deployment list --name $APP_NAME --resource-group $RESOURCE_GROUP
+   ```
+
+3. **重启应用**：
+   ```bash
+   az webapp restart --name $APP_NAME --resource-group $RESOURCE_GROUP
+   ```
+
 ## 开发路线图
 
 1. 基础功能实现（认证、任务管理、文件上传）

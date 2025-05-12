@@ -9,6 +9,18 @@
             <div class="card-body p-5">
                 <h1 class="text-center mb-4">Welcome to ClarifAI</h1>
                 
+                <div class="mb-4">
+                    <a href="{{ ms_login_url or url_for('auth.login') }}" class="btn btn-primary d-flex justify-content-center align-items-center w-100 py-2" style="background-color: #2672EC; border-color: #2672EC;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-microsoft me-2" viewBox="0 0 16 16">
+                            <path d="M7.462 0H0v7.19h7.462V0zM16 0H8.538v7.19H16V0zM7.462 8.211H0V16h7.462V8.211zm8.538 0H8.538V16H16V8.211z"/>
+                        </svg>
+                        <span class="fs-5">Sign in with Microsoft</span>
+                    </a>
+                </div>
+                <div class="text-center mb-3">
+                    <span class="text-muted">or sign in with credentials</span>
+                </div>
+                
                 <form method="POST" action="{{ url_for('auth.login') }}">
                     {{ form.hidden_tag() }}
                     
