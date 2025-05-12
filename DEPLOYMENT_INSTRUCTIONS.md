@@ -24,6 +24,42 @@
    # DATABASE_URL=postgresql://...
    ```
 
+### 使用快速启动脚本
+
+为了简化本地开发流程，我们已创建了一个快速启动脚本：
+
+```bash
+# 给脚本执行权限
+chmod +x run_local.sh
+
+# 运行应用
+./run_local.sh
+```
+
+这个脚本会自动设置正确的环境变量并启动应用程序。
+
+### 常见问题解决方案
+
+1. **数据库连接错误**：
+   如果遇到类似 `could not translate host name "your-azure-postgres-server.postgres.database.azure.com" to address` 的错误，说明.env文件中的数据库URL仍在使用。解决方法：
+   
+   ```bash
+   # 编辑.env文件，注释掉数据库URL
+   sed -i.bak 's/^DATABASE_URL=/#DATABASE_URL=/' .env
+   
+   # 或使用run_local.sh脚本
+   ./run_local.sh
+   ```
+
+2. **SQLite数据库初始化**：
+   如果需要重置或初始化本地SQLite数据库：
+   
+   ```bash
+   export FLASK_APP=run.py FLASK_ENV=development
+   flask db upgrade
+   python init_users.py  # 可选，创建测试用户
+   ```
+
 ## Azure部署流程
 
 我们已经优化了部署流程，以解决构建缓慢的问题。以下是完整部署步骤：
