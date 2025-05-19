@@ -7,21 +7,21 @@ load_dotenv(os.path.join(basedir, '.env'))
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard-to-guess-string'
     
-    # 数据库配置
+    # Database configuration
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'instance', 'clarifai.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # 上传文件配置
-    # 本地上传配置（开发环境）
+    # File upload configuration
+    # Local upload configuration (development environment)
     UPLOAD_FOLDER = os.path.join(basedir, 'app', 'static', 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload
     
-    # Azure Blob Storage（生产环境）
+    # Azure Blob Storage (production environment)
     AZURE_STORAGE_CONNECTION_STRING = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
     AZURE_STORAGE_CONTAINER_NAME = os.environ.get('AZURE_STORAGE_CONTAINER_NAME', 'file-uploads')
     
-    # Azure OpenAI配置
+    # Azure OpenAI configuration
     AZURE_OPENAI_API_KEY = os.environ.get('AZURE_OPENAI_API_KEY', '')
     AZURE_OPENAI_ENDPOINT = os.environ.get('AZURE_OPENAI_ENDPOINT', '')
     AZURE_OPENAI_DEPLOYMENT_NAME = os.environ.get('AZURE_OPENAI_DEPLOYMENT_NAME', 'gpt-4o-mini')
@@ -34,7 +34,7 @@ class Config:
     # Azure Key Vault
     AZURE_KEY_VAULT_URL = os.environ.get('AZURE_KEY_VAULT_URL')
     
-    # Microsoft Entra ID配置
+    # Microsoft Entra ID configuration
     ENTRA_CLIENT_ID = os.environ.get('ENTRA_CLIENT_ID')
     ENTRA_CLIENT_SECRET = os.environ.get('ENTRA_CLIENT_SECRET')
     ENTRA_TENANT_ID = os.environ.get('ENTRA_TENANT_ID')
@@ -43,17 +43,17 @@ class Config:
     ENTRA_REDIRECT_PATH = os.environ.get('ENTRA_REDIRECT_PATH', '/auth/callback')
     ENTRA_SCOPE = os.environ.get('ENTRA_SCOPE', 'user.read')
     
-    # 日志配置
+    # Logging configuration
     LOG_TO_STDOUT = os.environ.get('LOG_TO_STDOUT', 'false').lower() == 'true'
     
     @classmethod
     def init_app(cls, app):
-        """基础配置初始化"""
+        """Base configuration initialization"""
         pass
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    # 本地环境优先使用本地文件系统存储
+    # Local environment prioritizes local file system storage
     USE_AZURE_STORAGE = False
 
 class TestingConfig(Config):
@@ -63,23 +63,23 @@ class TestingConfig(Config):
     USE_AZURE_STORAGE = False
 
 class ProductionConfig(Config):
-    # 生产环境配置
+    # Production environment configuration
     DEBUG = False
     TESTING = False
     USE_AZURE_STORAGE = True
     
-    # SSL配置
+    # SSL configuration
     SSL_REDIRECT = os.environ.get('SSL_REDIRECT', 'false').lower() == 'true'
     
-    # 代理服务器配置 (如果在反向代理后面运行)
+    # Proxy server configuration (if running behind a reverse proxy)
     PREFERRED_URL_SCHEME = 'https'
     
     @classmethod
     def init_app(cls, app):
-        # 生产环境特定初始化
+        # Production environment specific initialization
         Config.init_app(app)
         
-        # 日志配置 - 输出到stdout以便由Azure捕获
+        # Logging configuration - output to stdout for Azure to capture
         if cls.LOG_TO_STDOUT:
             import logging
             from logging import StreamHandler
@@ -87,7 +87,7 @@ class ProductionConfig(Config):
             file_handler.setLevel(logging.INFO)
             app.logger.addHandler(file_handler)
             
-        # 如果应用在代理服务器后面
+        # If the application is behind a proxy server
         from werkzeug.middleware.proxy_fix import ProxyFix
         app.wsgi_app = ProxyFix(app.wsgi_app)
 

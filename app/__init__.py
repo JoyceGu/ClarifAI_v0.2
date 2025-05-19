@@ -11,7 +11,7 @@ db = SQLAlchemy()
 migrate = Migrate()
 login_manager = LoginManager()
 login_manager.login_view = 'auth.login'
-login_manager.login_message = '请登录后访问此页面'
+login_manager.login_message = 'Please log in to access this page'
 login_manager.login_message_category = 'info'
 
 # 自定义Azure服务扩展
@@ -98,9 +98,9 @@ def init_azure_services(app):
                 
                 app.logger.info("Azure Application Insights initialized")
             except ImportError:
-                app.logger.warning("Azure Application Insights 依赖未安装，跳过初始化")
+                app.logger.warning("Azure Application Insights dependencies not installed, skipping initialization")
         except Exception as e:
-            app.logger.error(f"Azure Application Insights 初始化失败: {str(e)}")
+            app.logger.error(f"Azure Application Insights initialization failed: {str(e)}")
     
     # 初始化Microsoft Entra ID
     if app.config.get('ENTRA_CLIENT_ID') and app.config.get('ENTRA_CLIENT_SECRET'):
@@ -113,10 +113,10 @@ def init_azure_services(app):
                 entra_id_provider = EntraIDAuthProvider(app)
                 app.logger.info("Microsoft Entra ID integration initialized")
             except Exception as e:
-                app.logger.error(f"Microsoft Entra ID 初始化失败: {str(e)}")
+                app.logger.error(f"Microsoft Entra ID initialization failed: {str(e)}")
                 entra_id_provider = None
         except ImportError:
-            app.logger.warning("Microsoft Entra ID 依赖未安装，跳过初始化")
+            app.logger.warning("Microsoft Entra ID dependencies not installed, skipping initialization")
     
     # 初始化Azure Storage（仅在生产模式下使用）
     if app.config.get('USE_AZURE_STORAGE') and app.config.get('AZURE_STORAGE_CONNECTION_STRING'):
@@ -127,9 +127,9 @@ def init_azure_services(app):
                 init_blob_service(app)
                 app.logger.info("Azure Blob Storage initialized")
             except Exception as e:
-                app.logger.error(f"Azure Blob Storage 初始化失败: {str(e)}")
+                app.logger.error(f"Azure Blob Storage initialization failed: {str(e)}")
         except ImportError:
-            app.logger.warning("Azure Blob Storage 依赖未安装，跳过初始化")
+            app.logger.warning("Azure Blob Storage dependencies not installed, skipping initialization")
 
 # 避免循环导入
 from app.models.user import User

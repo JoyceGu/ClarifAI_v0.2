@@ -10,7 +10,7 @@ from app.models import File
 import uuid
 import json
 import requests
-import random  # 临时使用，连接Azure OpenAI后可移除
+import random  # Temporary use, can be removed after connecting to Azure OpenAI
 
 tasks = Blueprint('tasks', __name__)
 
@@ -20,11 +20,11 @@ def all_tasks():
     page = request.args.get('page', 1, type=int)
     per_page = 10
     
-    # 过滤条件
+    # Filter conditions
     status_filter = request.args.get('status')
     priority_filter = request.args.get('priority')
     
-    # 构建查询
+    # Build query
     query = Task.query
     
     if status_filter:
@@ -46,11 +46,11 @@ def my_tasks():
     page = request.args.get('page', 1, type=int)
     per_page = 10
     
-    # 过滤条件
+    # Filter conditions
     status_filter = request.args.get('status')
     priority_filter = request.args.get('priority')
     
-    # 构建查询 - 获取分配给当前用户的任务
+    # Build query - get tasks assigned to current user
     query = Task.query.filter_by(assignee_id=current_user.id)
     
     if status_filter:
@@ -70,7 +70,7 @@ def my_tasks():
 @login_required
 def create_task():
     form = TaskForm()
-    # 获取可分配的用户列表
+    # Get list of assignable users
     form.assignee_id.choices = [(0, 'Unassigned')] + [
         (u.id, u.username) for u in User.query.order_by(User.username).all()
     ]
@@ -92,7 +92,7 @@ def create_task():
         db.session.add(task)
         db.session.commit()
         
-        # 处理上传文件
+        # Process uploaded files
         if 'supporting_files' in request.files:
             files = request.files.getlist('supporting_files')
             for file in files:
@@ -102,7 +102,7 @@ def create_task():
                     file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], unique_filename)
                     file.save(file_path)
                     
-                    # 创建文件记录
+                    # Create file record
                     file_record = File(
                         filename=unique_filename,
                         original_filename=filename,
@@ -145,22 +145,22 @@ def api_verify_task():
         }), 400
     
     try:
-        # Azure OpenAI API调用
-        # 这里应该配置您的Azure OpenAI API密钥和端点
+        # Azure OpenAI API call
+        # Configure your Azure OpenAI API key and endpoint here
         azure_api_key = os.environ.get('AZURE_OPENAI_API_KEY', '')
         azure_endpoint = os.environ.get('AZURE_OPENAI_ENDPOINT', '')
         azure_deployment_name = os.environ.get('AZURE_OPENAI_DEPLOYMENT_NAME', 'gpt-4o-mini')
         azure_api_version = os.environ.get('AZURE_OPENAI_API_VERSION', '2025-04-15')
         
         if azure_api_key and azure_endpoint:
-            # 构建API请求
+            # Build API request
             url = f"{azure_endpoint}/openai/deployments/{azure_deployment_name}/chat/completions?api-version={azure_api_version}"
             headers = {
                 "Content-Type": "application/json",
                 "api-key": azure_api_key
             }
             
-            # 构建对Azure OpenAI的请求内容
+            # Build request content for Azure OpenAI
             payload = {
                 "messages": [
                     {
@@ -177,33 +177,33 @@ def api_verify_task():
                 "n": 1
             }
             
-            # 发送请求到Azure OpenAI
+            # Send request to Azure OpenAI
             response = requests.post(url, headers=headers, json=payload)
             
             if response.status_code == 200:
                 response_data = response.json()
                 assistant_message = response_data['choices'][0]['message']['content']
                 
-                # 从响应中提取JSON部分
+                # Extract JSON part from response
                 try:
-                    # 查找JSON格式的字符串
+                    # Find JSON formatted string
                     json_start = assistant_message.find('{')
                     json_end = assistant_message.rfind('}') + 1
                     if json_start >= 0 and json_end > json_start:
                         json_str = assistant_message[json_start:json_end]
                         result = json.loads(json_str)
                         
-                        # 确保所有必要的字段都存在
+                        # Ensure all required fields are present
                         if all(k in result for k in ['clarity_score', 'feasibility_score', 'feedback']):
                             return jsonify(result)
                 except Exception as e:
                     current_app.logger.error(f"Error parsing AI response: {str(e)}")
             
-            # 如果Azure OpenAI调用失败或解析失败，返回模拟数据
+            # If Azure OpenAI call fails or parsing fails, return mock data
             current_app.logger.warning("Failed to get valid response from Azure OpenAI, using mock data")
         
-        # 使用模拟数据（当Azure OpenAI API不可用时）
-        # 实际部署时可删除此部分
+        # Use mock data (when Azure OpenAI API is unavailable)
+        # This part can be removed in actual deployment
         clarity_score = random.randint(65, 95)
         feasibility_score = random.randint(60, 90)
         
@@ -231,8 +231,8 @@ def api_verify_task():
 def verify_task(task_id):
     task = Task.query.get_or_404(task_id)
     
-    # 这里应该调用Azure OpenAI API进行验证
-    # 暂时使用简单模拟
+    # Should call Azure OpenAI API for verification
+    # Using simple simulation for now
     verification_result = "Task verification completed. The requirement is clear and feasible."
     
     task.verification_result = verification_result

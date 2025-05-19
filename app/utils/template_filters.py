@@ -5,14 +5,14 @@ filters_bp = Blueprint('filters', __name__)
 
 @filters_bp.app_template_filter('nl2br')
 def nl2br(value):
-    """将换行符转换为HTML <br> 标签"""
+    """Convert newlines to HTML <br> tags"""
     if not value:
         return ''
     return Markup(value.replace('\n', '<br>'))
 
 @filters_bp.app_template_filter('format_date')
 def format_date(value, format='%Y-%m-%d'):
-    """格式化日期"""
+    """Format date"""
     if not value:
         return ''
     if isinstance(value, str):
@@ -24,7 +24,7 @@ def format_date(value, format='%Y-%m-%d'):
 
 @filters_bp.app_template_filter('format_datetime')
 def format_datetime(value, format='%Y-%m-%d %H:%M'):
-    """格式化日期时间"""
+    """Format datetime"""
     if not value:
         return ''
     if isinstance(value, str):
@@ -36,7 +36,7 @@ def format_datetime(value, format='%Y-%m-%d %H:%M'):
 
 @filters_bp.app_template_filter('file_size_format')
 def file_size_format(size_in_bytes):
-    """将字节转换为可读格式"""
+    """Convert bytes to readable format"""
     if not size_in_bytes:
         return '0 B'
     

@@ -1,0 +1,74 @@
+/* 主要样式 */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+}
+
+/* 卡片阴影 */
+.card.shadow-sm {
+    box-shadow: 0 .125rem .25rem rgba(0,0,0,.075) !important;
+    transition: box-shadow 0.3s;
+}
+
+.card.shadow-sm:hover {
+    box-shadow: 0 .5rem 1rem rgba(0,0,0,.15) !important;
+}
+
+/* 导航栏 */
+.navbar {
+    box-shadow: 0 2px 4px rgba(0,0,0,.05);
+}
+
+/* 主要内容区域 */
+main.container {
+    min-height: calc(100vh - 200px);
+}
+
+/* 表单 */
+.form-control:focus,
+.form-select:focus {
+    border-color: #6c63ff;
+    box-shadow: 0 0 0 0.25rem rgba(108, 99, 255, 0.25);
+}
+
+/* 按钮样式 */
+.btn-primary {
+    background-color: #6c63ff;
+    border-color: #6c63ff;
+}
+
+.btn-primary:hover {
+    background-color: #5a52d8;
+    border-color: #5a52d8;
+}
+
+.btn-success {
+    background-color: #28c76f;
+    border-color: #28c76f;
+}
+
+.btn-success:hover {
+    background-color: #20a15f;
+    border-color: #20a15f;
+}
+
+/* 任务状态徽章 */
+.badge {
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
+
+/* 表格行悬停效果 */
+.table-hover tbody tr:hover {
+    background-color: rgba(108, 99, 255, 0.05);
+}
+
+/* 任务详情页 */
+.task-details .badge {
+    font-size: 0.9rem;
+}
+
+/* 自定义过滤器实现nl2br功能 */
+.nl2br {
+    white-space: pre-line;
+} 

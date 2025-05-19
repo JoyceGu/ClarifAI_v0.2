@@ -140,6 +140,8 @@ This script will automatically create the following Azure resources:
 - Azure Key Vault
 - App Service Plan
 - Web App
+- Azure OpenAI
+- Microsoft Entra ID
 
 #### 2. Prepare the Deployment Package
 

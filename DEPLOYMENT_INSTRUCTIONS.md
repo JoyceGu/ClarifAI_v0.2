@@ -1,136 +1,136 @@
-# ClarifAI 部署指南
+# ClarifAI Deployment Guide
 
-本文档提供了详细的ClarifAI应用部署到Azure的步骤说明。
+This document provides detailed steps for deploying the ClarifAI application to Azure.
 
-## 修复本地开发问题
+## Fixing Local Development Issues
 
-您在本地运行应用时遇到的`ModuleNotFoundError: No module named 'psycopg2'`错误已解决。这是由于.env文件中配置了PostgreSQL数据库连接，但本地环境中没有正确设置PostgreSQL。
+The `ModuleNotFoundError: No module named 'psycopg2'` error you encountered when running the application locally has been resolved. This occurred because the .env file configured a PostgreSQL database connection, but PostgreSQL was not properly set up in the local environment.
 
-### 开发环境配置
+### Development Environment Configuration
 
-在本地开发时，请确保：
+When developing locally, ensure:
 
-1. **清除或修改DATABASE_URL环境变量**
+1. **Clear or modify the DATABASE_URL environment variable**
    ```bash
-   # 运行应用时清除数据库URL，使用SQLite
+   # Run the application with empty database URL to use SQLite
    export DATABASE_URL="" && export FLASK_ENV=development && flask run --port=8000
    ```
 
-2. **或者创建.env.development文件**
+2. **Or create a .env.development file**
    ```
-   # Flask应用配置 - 开发环境
+   # Flask application configuration - development environment
    FLASK_ENV=development
-   # 注释掉DATABASE_URL以使用SQLite
+   # Comment out DATABASE_URL to use SQLite
    # DATABASE_URL=postgresql://...
    ```
 
-### 使用快速启动脚本
+### Using Quick Start Script
 
-为了简化本地开发流程，我们已创建了一个快速启动脚本：
+To simplify the local development process, we have created a quick start script:
 
 ```bash
-# 给脚本执行权限
+# Give execution permissions to the script
 chmod +x run_local.sh
 
-# 运行应用
+# Run the application
 ./run_local.sh
 ```
 
-这个脚本会自动设置正确的环境变量并启动应用程序。
+This script automatically sets the correct environment variables and starts the application.
 
-### 常见问题解决方案
+### Common Problem Solutions
 
-1. **数据库连接错误**：
-   如果遇到类似 `could not translate host name "your-azure-postgres-server.postgres.database.azure.com" to address` 的错误，说明.env文件中的数据库URL仍在使用。解决方法：
+1. **Database Connection Errors**:
+   If you encounter errors like `could not translate host name "your-azure-postgres-server.postgres.database.azure.com" to address`, it means the database URL in the .env file is still being used. Solution:
    
    ```bash
-   # 编辑.env文件，注释掉数据库URL
+   # Edit the .env file to comment out the database URL
    sed -i.bak 's/^DATABASE_URL=/#DATABASE_URL=/' .env
    
-   # 或使用run_local.sh脚本
+   # Or use the run_local.sh script
    ./run_local.sh
    ```
 
-2. **SQLite数据库初始化**：
-   如果需要重置或初始化本地SQLite数据库：
+2. **SQLite Database Initialization**:
+   If you need to reset or initialize the local SQLite database:
    
    ```bash
    export FLASK_APP=run.py FLASK_ENV=development
    flask db upgrade
-   python init_users.py  # 可选，创建测试用户
+   python init_users.py  # Optional, creates test users
    ```
 
-## Azure部署流程
+## Azure Deployment Process
 
-我们已经优化了部署流程，以解决构建缓慢的问题。以下是完整部署步骤：
+We have optimized the deployment process to address slow build times. Below are the complete deployment steps:
 
-### 1. 部署前准备
+### 1. Pre-deployment Preparation
 
-1. **确保已安装和配置Azure CLI**
+1. **Ensure Azure CLI is installed and configured**
    ```bash
    az --version
    az login
    ```
 
-2. **创建生产环境配置文件**
-   创建.env.production文件，包含以下内容：
+2. **Create a production environment configuration file**
+   Create a .env.production file with the following content:
    ```
-   # Flask应用配置 - 生产环境
+   # Flask application configuration - production environment
    FLASK_ENV=production
    DATABASE_URL=mssql+pymssql://username:password@server.database.windows.net:1433/dbname
    USE_AZURE_STORAGE=true
-   # ...其他Azure配置...
+   # ...other Azure configurations...
    ```
 
-### 2. 创建Azure资源
+### 2. Create Azure Resources
 
-运行优化后的部署脚本创建所需的Azure资源：
+Run the optimized deployment script to create the required Azure resources:
 
 ```bash
 ./deploy_to_azure.sh
 ```
 
-请记下脚本输出的资源名称和信息，包括：
+Note the resource names and information output by the script, including:
 - Resource Group
 - App Name
 - SQL Server
 - Storage Account
 - App Service URL
 
-### 3. 创建部署包
+### 3. Create Deployment Package
 
-使用优化后的脚本创建部署包：
+Use the optimized script to create the deployment package:
 
 ```bash
 ./prepare_deploy_package.sh
 ```
 
-### 4. 部署应用程序
+### 4. Deploy the Application
 
-使用以下命令部署应用程序：
+Use the following command to deploy the application:
 
 ```bash
-# 使用脚本输出中的资源组和应用名称
-RESOURCE_GROUP="脚本输出的资源组名称"
-APP_NAME="脚本输出的应用名称"
+# Use the resource group and application name from the script output
+RESOURCE_GROUP="resource group name from script output"
+APP_NAME="app name from script output"
 
-# 部署到生产环境
+# Deploy to production environment
 az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --src deployment/clarifai_app.zip
 ```
 
-或者使用部署槽位进行零停机部署：
+Or use deployment slots for zero-downtime deployment:
 
 ```bash
-# 部署到过渡环境
+# Deploy to staging environment
 az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --slot staging --src deployment/clarifai_app.zip
 
-# 验证过渡环境功能正常后，交换到生产环境
+# After verifying the staging environment is functioning correctly, swap to production
 az webapp deployment slot swap --resource-group $RESOURCE_GROUP --name $APP_NAME --slot staging --target-slot production
 ```
 
-### 5. 配置Azure服务
+### 5. Configure Azure Services
 
-1. **Azure OpenAI配置**
+1. **Azure OpenAI Configuration**
    ```bash
    az webapp config appsettings set \
        --name $APP_NAME \
@@ -142,7 +142,7 @@ az webapp deployment slot swap --resource-group $RESOURCE_GROUP --name $APP_NAME
        AZURE_OPENAI_API_VERSION="2025-04-15"
    ```
 
-2. **Microsoft Entra ID配置**
+2. **Microsoft Entra ID Configuration**
    ```bash
    az webapp config appsettings set \
        --name $APP_NAME \
@@ -154,46 +154,46 @@ az webapp deployment slot swap --resource-group $RESOURCE_GROUP --name $APP_NAME
        ENTRA_REDIRECT_PATH="/auth/callback"
    ```
 
-### 6. 监控部署
+### 6. Monitor Deployment
 
-使用以下命令查看部署日志和状态：
+Use the following commands to view deployment logs and status:
 
 ```bash
-# 查看部署状态
+# Check deployment status
 az webapp deployment list --name $APP_NAME --resource-group $RESOURCE_GROUP
 
-# 查看应用程序日志
+# View application logs
 az webapp log tail --name $APP_NAME --resource-group $RESOURCE_GROUP
 ```
 
-### 7. 访问应用程序
+### 7. Access the Application
 
-部署完成后，您可以通过以下URL访问应用程序：
+After deployment is complete, you can access the application at the following URL:
 
 ```
 https://<app-name>.azurewebsites.net
 ```
 
-## 部署优化总结
+## Deployment Optimization Summary
 
-为解决部署缓慢的问题，我们进行了以下优化：
+To address slow deployment issues, we made the following optimizations:
 
-1. **减小部署包大小**
-   - 创建了.deployignore文件排除不必要的文件
-   - 使用rsync过滤不需要的文件
+1. **Reduce Deployment Package Size**
+   - Created a .deployignore file to exclude unnecessary files
+   - Used rsync to filter out unwanted files
 
-2. **优化构建过程**
-   - 创建了.deployment文件配置构建参数
-   - 设置了SCM_DO_BUILD_DURING_DEPLOYMENT=true
-   - 添加了构建优化配置
+2. **Optimize Build Process**
+   - Created a .deployment file to configure build parameters
+   - Set SCM_DO_BUILD_DURING_DEPLOYMENT=true
+   - Added build optimization configurations
 
-3. **提升App Service性能**
-   - 将App Service Plan从F1免费层升级到B1 Basic层
-   - 启用了本地缓存功能
-   - 创建了部署槽位实现零停机部署
+3. **Improve App Service Performance**
+   - Upgraded the App Service Plan from F1 free tier to B1 Basic tier
+   - Enabled local cache functionality
+   - Created deployment slots for zero-downtime deployment
 
-4. **改进部署和启动脚本**
-   - 优化了启动脚本，添加了日志记录
-   - 添加了环境检测，自动适应不同环境
+4. **Enhance Deployment and Startup Scripts**
+   - Optimized the startup script, added logging
+   - Added environment detection to automatically adapt to different environments
 
-如需更多部署信息，请参考README.md中的"Azure Deployment Guide"和"Deployment Optimization"部分。 
+For more deployment information, refer to the "Azure Deployment Guide" and "Deployment Optimization" sections in the README.md file. 

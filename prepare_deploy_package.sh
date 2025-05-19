@@ -1,29 +1,29 @@
 #!/bin/bash
-# 准备Azure部署包 - 优化版本
+# Prepare Azure Deployment Package - Optimized Version
 
-echo "======== 准备优化的Azure部署包 ========"
+echo "======== Preparing Optimized Azure Deployment Package ========"
 
-# 确保目录存在
+# Ensure directory exists
 mkdir -p deployment
 
-# 清理旧文件
+# Clean up old files
 if [ -f "deployment/clarifai_app.zip" ]; then
-    echo "正在删除旧的部署包..."
+    echo "Deleting old deployment package..."
     rm deployment/clarifai_app.zip
 fi
 
-# 创建临时部署目录
-echo "正在准备部署文件..."
+# Create temporary deployment directory
+echo "Preparing deployment files..."
 TEMP_DIR="deployment/temp"
 mkdir -p $TEMP_DIR
 
-# 使用rsync排除.deployignore中列出的文件
+# Use rsync to exclude files listed in .deployignore
 if [ -f ".deployignore" ]; then
-    echo "使用.deployignore排除不必要的文件..."
+    echo "Using .deployignore to exclude unnecessary files..."
     rsync -av --exclude-from='.deployignore' . $TEMP_DIR/
 else
-    # 如果没有.deployignore文件，使用基本复制
-    echo "警告: 未找到.deployignore文件，仅复制基本文件..."
+    # If .deployignore file doesn't exist, use basic copy
+    echo "Warning: .deployignore file not found, copying only basic files..."
     cp -r app $TEMP_DIR/
     cp -r migrations $TEMP_DIR/
     cp requirements.txt $TEMP_DIR/
@@ -33,109 +33,149 @@ else
     cp .env.example $TEMP_DIR/.env.example
 fi
 
-# 创建精简版requirements.txt以加快部署速度
-echo "创建优化的requirements.txt..."
+# Create simplified requirements.txt to speed up deployment
+echo "Creating optimized requirements.txt..."
 if command -v pip-compile &> /dev/null; then
-    echo "# 自动生成的优化依赖文件" > $TEMP_DIR/requirements-optimized.txt
+    echo "# Automatically generated optimized dependencies" > $TEMP_DIR/requirements-optimized.txt
     pip-compile requirements.txt --output-file=- | grep -v '^#' | grep -v '^-e' >> $TEMP_DIR/requirements-optimized.txt
-    # 替换原始的requirements.txt
+    # Replace original requirements.txt
     mv $TEMP_DIR/requirements-optimized.txt $TEMP_DIR/requirements.txt
 else
-    echo "警告: pip-compile未安装，跳过依赖优化"
+    echo "Warning: pip-compile not installed, skipping dependency optimization"
 fi
 
-# 创建.deployment文件以优化部署过程
+# Create .deployment file to optimize deployment process
 cat > $TEMP_DIR/.deployment << 'EOF'
 [config]
 SCM_DO_BUILD_DURING_DEPLOYMENT=true
 command = bash ./startup.sh
 EOF
 
-# 创建优化的启动脚本
+# Create optimized startup script
 cat > $TEMP_DIR/startup.sh << 'EOF'
 #!/bin/bash
-# 部署后初始化脚本 - 优化版本
+# Post-deployment Initialization Script - Optimized Version
 
-# 设置日志文件
+# Set up log file
 LOG_FILE="startup_log.txt"
 exec > >(tee -a $LOG_FILE) 2>&1
 
-echo "=============== 开始部署初始化 [$(date)] ==============="
+echo "=============== Starting Deployment Initialization [$(date)] ==============="
 
-# 初始化环境
+# Initialize environment
 export FLASK_APP=run.py
 export FLASK_ENV=production
+export PYTHONUNBUFFERED=1
 
-# 设置Azure App Service环境变量，避免重复进行缓慢的Python构建过程
+# Display environment details for debugging
+echo "Python version: $(python --version)"
+echo "Current directory: $(pwd)"
+echo "Directory contents: $(ls -la)"
+
+# Set Azure App Service environment variables to avoid slow Python build process
 export SCM_DO_BUILD_DURING_DEPLOYMENT=true
 
-echo "正在初始化数据库..."
-flask db upgrade
+# Check if requirements are installed
+echo "Checking Python packages..."
+pip list
 
-# 创建初始测试用户（如果不存在）
+# Verify database configuration
+echo "Database URL: $DATABASE_URL"
+if [ -z "$DATABASE_URL" ]; then
+    echo "WARNING: DATABASE_URL is not set, this may cause issues!"
+fi
+
+echo "Initializing database..."
+flask db upgrade || {
+    echo "WARNING: Database migration failed. Continuing anyway..."
+}
+
+# Create initial test users (if they don't exist)
+echo "Attempting to create initial test users..."
 python << 'PYTHON_SCRIPT'
 from app import create_app, db
 from app.models.user import User, UserRole
 from werkzeug.security import generate_password_hash
+import sys
+import traceback
 
-app = create_app('production')
-with app.app_context():
-    # 检查是否已有用户
-    if User.query.count() == 0:
-        # 创建PM用户
-        pm_user = User(
-            email='pm@test.com',
-            username='Product Manager',
-            role=UserRole.PM
-        )
-        pm_user.password_hash = generate_password_hash('password123')
-        
-        # 创建研究员用户
-        researcher_user = User(
-            email='researcher@test.com',
-            username='Researcher',
-            role=UserRole.RESEARCHER
-        )
-        researcher_user.password_hash = generate_password_hash('password123')
-        
-        db.session.add(pm_user)
-        db.session.add(researcher_user)
-        db.session.commit()
-        print("已创建初始测试用户")
-    else:
-        print("已存在用户，跳过初始用户创建")
+try:
+    print("Creating app context...")
+    app = create_app('production')
+    with app.app_context():
+        print("Checking for existing users...")
+        # Check if users already exist
+        if User.query.count() == 0:
+            print("No users found. Creating initial test users...")
+            # Create PM user
+            pm_user = User(
+                email='pm@test.com',
+                username='Product Manager',
+                role=UserRole.PM
+            )
+            pm_user.password_hash = generate_password_hash('password123')
+            
+            # Create Researcher user
+            researcher_user = User(
+                email='researcher@test.com',
+                username='Researcher',
+                role=UserRole.RESEARCHER
+            )
+            researcher_user.password_hash = generate_password_hash('password123')
+            
+            db.session.add(pm_user)
+            db.session.add(researcher_user)
+            db.session.commit()
+            print("Initial test users created successfully")
+        else:
+            print("Users already exist, skipping initial user creation")
+except Exception as e:
+    print(f"Error creating initial users: {str(e)}")
+    traceback.print_exc()
 PYTHON_SCRIPT
 
-# 使应用正确加载Azure配置
-echo "正在优化Azure服务连接配置..."
-if [ -n "$WEBSITE_SITE_NAME" ]; then  # 检查是否在Azure环境中
-    echo "在Azure环境中运行，启用应用缓存..."
-    touch .skip-lock  # 避免每次都重新构建
+# Make the application correctly load Azure configuration
+echo "Optimizing Azure service connection configuration..."
+if [ -n "$WEBSITE_SITE_NAME" ]; then  # Check if running in Azure environment
+    echo "Running in Azure environment, enabling application cache..."
+    touch .skip-lock  # Avoid rebuilding each time
     
-    # 创建web.debug.config
+    # Create web.debug.config
     if [ ! -f "web.debug.config" ]; then
         cp web.config web.debug.config
     fi
 fi
 
-echo "=============== 初始化完成 [$(date)] ==============="
+# Ensure gunicorn is available
+if ! command -v gunicorn &> /dev/null; then
+    echo "WARNING: gunicorn not found! Installing..."
+    pip install gunicorn
+fi
+
+echo "Testing application startup..."
+python -c "from app import create_app; app = create_app('production'); print('Application initialization test successful')" || {
+    echo "ERROR: Application could not be initialized!"
+}
+
+echo "=============== Initialization Complete [$(date)] ==============="
+echo "Startup script completed. The application should now be available."
 EOF
 
-# 使脚本可执行
+# Make script executable
 chmod +x $TEMP_DIR/startup.sh
 
-# 创建zip文件
-echo "正在创建优化的部署包..."
+# Create zip file
+echo "Creating optimized deployment package..."
 cd $TEMP_DIR
 zip -r ../clarifai_app.zip ./* .deployment
 cd ../..
 
-# 计算部署包大小
+# Calculate deployment package size
 PACKAGE_SIZE=$(du -h deployment/clarifai_app.zip | cut -f1)
 
-# 清理临时文件
-echo "正在清理临时文件..."
+# Clean up temporary files
+echo "Cleaning up temporary files..."
 rm -rf $TEMP_DIR
 
-echo "部署包已创建: $(pwd)/deployment/clarifai_app.zip (大小: $PACKAGE_SIZE)"
-echo "完成 ✓" 
+echo "Deployment package created: $(pwd)/deployment/clarifai_app.zip (Size: $PACKAGE_SIZE)"
+echo "Completed ✓" 
