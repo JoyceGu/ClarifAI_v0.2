@@ -16,8 +16,8 @@ logger.info("Starting application initialization...")
 try:
     from app import create_app
     
-    # 从环境变量中获取配置，默认为development
-    config_name = os.environ.get('FLASK_ENV', 'development')
+    # 从环境变量中获取配置，默认为production
+    config_name = os.environ.get('FLASK_ENV', 'production')
     logger.info(f"Using configuration: {config_name}")
     
     app = create_app(config_name)
