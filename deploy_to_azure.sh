@@ -281,7 +281,7 @@ if ! resource_exists "webapp" "$APP_NAME" "$RESOURCE_GROUP"; then
       --name $APP_NAME \
       --resource-group $RESOURCE_GROUP \
       --plan $APP_SERVICE_PLAN \
-      --runtime "PYTHON:3.12"
+      --runtime "PYTHON:3.10"
   handle_error $? "Failed to create Web App"
   
   # Ensure Web App creation success
@@ -296,7 +296,7 @@ echo "Configuring Web App settings..."
 az webapp config set \
     --name $APP_NAME \
     --resource-group $RESOURCE_GROUP \
-    --startup-file "gunicorn --bind=0.0.0.0:8000 run:app"
+    --startup-file "python3 -m gunicorn --bind=0.0.0.0:8000 run:app"
 handle_error $? "Failed to configure Web App settings"
 
 # Enable local cache to improve performance and build speed
@@ -315,6 +315,7 @@ az webapp config appsettings set \
     --settings \
     SCM_DO_BUILD_DURING_DEPLOYMENT=true \
     ENABLE_ORYX_BUILD=true \
+    BUILD_FLAGS="--platform-version 3.10" \
     PRE_BUILD_COMMAND="pip install --upgrade pip pip-tools" \
     POST_BUILD_COMMAND="flask db upgrade"
 handle_error $? "Failed to set build settings"
