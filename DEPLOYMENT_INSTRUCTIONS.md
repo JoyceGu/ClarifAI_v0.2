@@ -115,14 +115,14 @@ RESOURCE_GROUP="resource group name from script output"
 APP_NAME="app name from script output"
 
 # Deploy to production environment
-az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --src deployment/clarifai_app.zip
+az webapp deploy --resource-group $RESOURCE_GROUP --name $APP_NAME --src-path deployment/clarifai_app.zip --type zip
 ```
 
 Or use deployment slots for zero-downtime deployment:
 
 ```bash
 # Deploy to staging environment
-az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --slot staging --src deployment/clarifai_app.zip
+az webapp deploy --resource-group $RESOURCE_GROUP --name $APP_NAME --src-path deployment/clarifai_app.zip --type zip --slot staging
 
 # After verifying the staging environment is functioning correctly, swap to production
 az webapp deployment slot swap --resource-group $RESOURCE_GROUP --name $APP_NAME --slot staging --target-slot production
@@ -164,6 +164,9 @@ az webapp deployment list --name $APP_NAME --resource-group $RESOURCE_GROUP
 
 # View application logs
 az webapp log tail --name $APP_NAME --resource-group $RESOURCE_GROUP
+
+# View application settings
+az webapp config appsettings list --name $APP_NAME --resource-group $RESOURCE_GROUP
 ```
 
 ### 7. Access the Application

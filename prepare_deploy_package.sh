@@ -3,6 +3,15 @@
 
 echo "======== Preparing Optimized Azure Deployment Package ========"
 
+# Ensure critical files exist
+if [ ! -f "run.py" ] || [ ! -d "app" ] || [ ! -f "requirements.txt" ]; then
+  echo "ERROR: Critical files not found. Please ensure the following files exist:"
+  echo "- run.py"
+  echo "- app/ directory"
+  echo "- requirements.txt"
+  exit 1
+fi
+
 # Ensure directory exists
 mkdir -p deployment
 
@@ -79,24 +88,36 @@ export SCM_DO_BUILD_DURING_DEPLOYMENT=true
 echo "Checking Python packages..."
 pip list
 
-# Verify database configuration
+# Check database connection
 echo "Database URL: $DATABASE_URL"
 if [ -z "$DATABASE_URL" ]; then
-    echo "WARNING: DATABASE_URL is not set, this may cause issues!"
+    echo "ERROR: DATABASE_URL is not set, database may not work properly!"
+    echo "Please set the correct DATABASE_URL in the app service configuration"
 fi
 
+# Improve database migration error handling
 echo "Initializing database..."
-flask db upgrade || {
-    echo "WARNING: Database migration failed. Continuing anyway..."
-}
+flask db upgrade
+if [ $? -ne 0 ]; then
+    echo "ERROR: Database migration failed. Please check connection string and database permissions."
+    # In production environment, this might be a critical error
+    if [ "$FLASK_ENV" = "production" ]; then
+        echo "Database migration failed in production environment, this is a critical error."
+        # Usually we should exit here, but this might prevent the app from starting
+        # Depending on application logic, we can choose to continue or exit
+    fi
+fi
 
-# Create initial test users (if they don't exist)
-echo "Attempting to create initial test users..."
-python << 'PYTHON_SCRIPT'
+# Skip test user creation in production environment
+if [ "$FLASK_ENV" != "production" ] || [ "$CREATE_TEST_USERS" = "true" ]; then
+    echo "Attempting to create initial test users..."
+    python << 'PYTHON_SCRIPT'
 from app import create_app, db
 from app.models.user import User, UserRole
 from werkzeug.security import generate_password_hash
+import os
 import sys
+import secrets
 import traceback
 
 try:
@@ -107,13 +128,16 @@ try:
         # Check if users already exist
         if User.query.count() == 0:
             print("No users found. Creating initial test users...")
+            # Use stronger password
+            strong_password = secrets.token_urlsafe(16)
+            
             # Create PM user
             pm_user = User(
                 email='pm@test.com',
                 username='Product Manager',
                 role=UserRole.PM
             )
-            pm_user.password_hash = generate_password_hash('password123')
+            pm_user.password_hash = generate_password_hash(strong_password)
             
             # Create Researcher user
             researcher_user = User(
@@ -121,18 +145,23 @@ try:
                 username='Researcher',
                 role=UserRole.RESEARCHER
             )
-            researcher_user.password_hash = generate_password_hash('password123')
+            researcher_user.password_hash = generate_password_hash(strong_password)
             
             db.session.add(pm_user)
             db.session.add(researcher_user)
             db.session.commit()
             print("Initial test users created successfully")
+            print(f"Generated password for test users: {strong_password}")
+            print("Please note this password, it will only be shown once!")
         else:
             print("Users already exist, skipping initial user creation")
 except Exception as e:
     print(f"Error creating initial users: {str(e)}")
     traceback.print_exc()
 PYTHON_SCRIPT
+else
+    echo "Skipping test user creation (production environment)"
+fi
 
 # Make the application correctly load Azure configuration
 echo "Optimizing Azure service connection configuration..."

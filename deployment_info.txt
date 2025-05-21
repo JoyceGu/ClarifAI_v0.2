@@ -1,0 +1,14 @@
+Deployment Information (2025-05-21-09:41:35)
+=====================================
+Resource Group: clarifai-test-0517
+App Name: clarifai-app
+SQL Server: clarifai-sql-server
+SQL Database: clarifaidb
+Storage Account: clarifaistfb9a4349
+Application Insights: clarifai-insights
+Key Vault: clarifai-kv
+
+Deployment Command:
+az webapp deployment source config-zip --resource-group clarifai-test-0517 --name clarifai-app --src deployment/clarifai_app.zip
+
+IMPORTANT: Keep this information secure for future reference.

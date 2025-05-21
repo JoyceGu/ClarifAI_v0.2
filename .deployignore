@@ -69,4 +69,12 @@ ENV/
 *.log
 
 # Azure部署文件夹（避免递归）
-deployment/ 
+deployment/
+
+# 新增的文件和目录
+.github
+*.pyc
+*.pyo
+*.pyd
+.venv/
+node_modules/ 
