@@ -293,6 +293,54 @@ flask db upgrade
 flask init-db
 ```
 
+#### 6. GitHub push被阻止 - 检测到敏感信息
+**问题**: push时出现"Repository rule violations found"错误
+```
+Push cannot contain secrets - Azure OpenAI Key
+```
+
+**解决方案**:
+```bash
+# 方法1: 删除包含敏感信息的文件
+rm .env.backup  # 或其他包含密钥的文件
+
+# 方法2: 如果敏感信息在Git历史中，需要重写历史
+git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch .env.backup' --prune-empty --tag-name-filter cat -- --all
+
+# 强制push（注意：这会重写远程历史）
+git push origin branch-name --force
+```
+
+#### 7. Azure部署认证失败
+**问题**: push到Azure时出现"Authentication failed"
+
+**解决方案**:
+```bash
+# 获取Azure部署凭据
+az webapp deployment list-publishing-profiles --name your-app-name --resource-group your-resource-group
+
+# 或者使用Azure CLI登录
+az login
+
+# 设置部署用户
+az webapp deployment user set --user-name your-username --password your-password
+```
+
+#### 8. Gunicorn命令未找到
+**问题**: 运行gunicorn时提示"command not found"
+
+**解决方案**:
+```bash
+# 确保虚拟环境已激活
+source venv/bin/activate
+
+# 重新安装gunicorn
+pip install gunicorn==21.2.0
+
+# 验证安装
+gunicorn --version
+```
+
 ### 开发环境配置
 
 确保您的.env文件包含以下最小配置：
