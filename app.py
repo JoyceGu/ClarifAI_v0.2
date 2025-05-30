@@ -1,7 +1,10 @@
+import os
 from app import create_app, db
 from app.models import User, Task, File, UserRole
 
-app = create_app()
+# Use production config for Azure, development for local
+config_name = os.environ.get('FLASK_CONFIG') or 'default'
+app = create_app(config_name)
 
 @app.shell_context_processor
 def make_shell_context():
