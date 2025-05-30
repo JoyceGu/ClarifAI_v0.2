@@ -7,7 +7,7 @@ load_dotenv(os.path.join(basedir, '.env'))
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard-to-guess-string'
     
-    # 数据库配置
+    # 数据库配置 - 简化为SQLite，避免PostgreSQL连接问题
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'instance', 'clarifai.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -17,29 +17,28 @@ class Config:
     UPLOAD_FOLDER = os.path.join(basedir, 'app', 'static', 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max upload
     
-    # Azure Blob Storage（生产环境）
-    AZURE_STORAGE_CONNECTION_STRING = os.environ.get('AZURE_STORAGE_CONNECTION_STRING')
+    # Azure Blob Storage（生产环境）- 改为可选
+    AZURE_STORAGE_CONNECTION_STRING = os.environ.get('AZURE_STORAGE_CONNECTION_STRING', '')
     AZURE_STORAGE_CONTAINER_NAME = os.environ.get('AZURE_STORAGE_CONTAINER_NAME', 'file-uploads')
     
-    # Azure OpenAI配置
+    # Azure OpenAI配置 - 改为可选
     AZURE_OPENAI_API_KEY = os.environ.get('AZURE_OPENAI_API_KEY', '')
     AZURE_OPENAI_ENDPOINT = os.environ.get('AZURE_OPENAI_ENDPOINT', '')
     AZURE_OPENAI_DEPLOYMENT_NAME = os.environ.get('AZURE_OPENAI_DEPLOYMENT_NAME', 'gpt-4o-mini')
     AZURE_OPENAI_API_VERSION = os.environ.get('AZURE_OPENAI_API_VERSION', '2025-04-15')
     
-    # Azure Application Insights
-    APPLICATIONINSIGHTS_CONNECTION_STRING = os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING')
+    # Azure Application Insights - 改为可选
+    APPLICATIONINSIGHTS_CONNECTION_STRING = os.environ.get('APPLICATIONINSIGHTS_CONNECTION_STRING', '')
     APPLICATIONINSIGHTS_ROLE_NAME = os.environ.get('APPLICATIONINSIGHTS_ROLE_NAME', 'clarifai-webapp')
     
-    # Azure Key Vault
-    AZURE_KEY_VAULT_URL = os.environ.get('AZURE_KEY_VAULT_URL')
+    # Azure Key Vault - 改为可选
+    AZURE_KEY_VAULT_URL = os.environ.get('AZURE_KEY_VAULT_URL', '')
     
-    # Microsoft Entra ID配置
-    ENTRA_CLIENT_ID = os.environ.get('ENTRA_CLIENT_ID')
-    ENTRA_CLIENT_SECRET = os.environ.get('ENTRA_CLIENT_SECRET')
-    ENTRA_TENANT_ID = os.environ.get('ENTRA_TENANT_ID')
-    ENTRA_AUTHORITY = os.environ.get('ENTRA_AUTHORITY', 
-                                  f"https://login.microsoftonline.com/{os.environ.get('ENTRA_TENANT_ID')}")
+    # Microsoft Entra ID配置 - 改为可选
+    ENTRA_CLIENT_ID = os.environ.get('ENTRA_CLIENT_ID', '')
+    ENTRA_CLIENT_SECRET = os.environ.get('ENTRA_CLIENT_SECRET', '')
+    ENTRA_TENANT_ID = os.environ.get('ENTRA_TENANT_ID', '')
+    ENTRA_AUTHORITY = os.environ.get('ENTRA_AUTHORITY', '')
     ENTRA_REDIRECT_PATH = os.environ.get('ENTRA_REDIRECT_PATH', '/auth/callback')
     ENTRA_SCOPE = os.environ.get('ENTRA_SCOPE', 'user.read')
     
@@ -66,7 +65,8 @@ class ProductionConfig(Config):
     # 生产环境配置
     DEBUG = False
     TESTING = False
-    USE_AZURE_STORAGE = True
+    # 临时禁用Azure Storage，让应用先能启动
+    USE_AZURE_STORAGE = False
     
     # SSL配置
     SSL_REDIRECT = os.environ.get('SSL_REDIRECT', 'false').lower() == 'true'
