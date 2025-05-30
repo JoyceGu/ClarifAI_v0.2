@@ -223,4 +223,108 @@ https://clarifai-app.azurewebsites.net
 ## 测试账号
 
 - PM: pm@test.com / password123
-- Researcher: researcher@test.com / password123 
+- Researcher: researcher@test.com / password123
+
+## 故障排除
+
+### 常见问题及解决方案
+
+#### 1. Azure连接字符串错误
+**问题**: 启动时出现 "Invalid connection string" 错误
+```
+ValueError: Invalid connection string
+```
+
+**解决方案**: 
+- 确保.env文件中的Azure服务连接字符串是有效的，或者将其注释掉
+- 对于本地开发环境，可以将以下配置注释掉：
+  ```bash
+  #APPLICATIONINSIGHTS_CONNECTION_STRING=
+  #AZURE_KEY_VAULT_URL=
+  ```
+
+#### 2. 端口被占用
+**问题**: 启动时提示"Address already in use"
+```
+Port 8000 is in use by another program
+```
+
+**解决方案**:
+```bash
+# 查找占用端口的进程
+lsof -i :8000
+# 终止进程（将PID替换为实际的进程ID）
+kill <PID>
+```
+
+#### 3. Python命令未找到
+**问题**: 运行python命令时提示"command not found"
+
+**解决方案**:
+- 确保虚拟环境已激活
+- 在macOS上使用python3代替python：
+  ```bash
+  python3 app.py
+  ```
+
+#### 4. 依赖包安装失败
+**问题**: pip install失败或包版本冲突
+
+**解决方案**:
+```bash
+# 升级pip
+pip install --upgrade pip
+# 清理缓存并重新安装
+pip cache purge
+pip install -r requirements.txt --force-reinstall
+```
+
+#### 5. 数据库初始化问题
+**问题**: 数据库相关错误
+
+**解决方案**:
+```bash
+# 初始化数据库
+flask db init
+flask db migrate -m "Initial migration"
+flask db upgrade
+
+# 创建初始用户
+flask init-db
+```
+
+### 开发环境配置
+
+确保您的.env文件包含以下最小配置：
+```bash
+SECRET_KEY=your-secret-key-here
+DATABASE_URL=sqlite:///instance/clarifai.db
+UPLOAD_FOLDER=app/static/uploads
+MAX_CONTENT_LENGTH=16777216
+USE_AZURE_STORAGE=false
+LOG_TO_STDOUT=false
+```
+
+### 启动应用的正确步骤
+
+1. **激活虚拟环境**:
+   ```bash
+   source venv/bin/activate  # macOS/Linux
+   ```
+
+2. **安装依赖**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. **配置环境变量**:
+   - 复制 `env.example` 到 `.env`
+   - 根据需要修改配置
+
+4. **启动应用**:
+   ```bash
+   python3 app.py
+   ```
+
+5. **访问应用**:
+   打开浏览器访问 `http://localhost:8000`

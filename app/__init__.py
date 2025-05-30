@@ -67,7 +67,8 @@ def create_app(config_name='default'):
 def init_azure_services(app):
     """根据环境初始化Azure服务"""
     # 初始化Azure Application Insights
-    if app.config.get('APPLICATIONINSIGHTS_CONNECTION_STRING'):
+    connection_string = app.config.get('APPLICATIONINSIGHTS_CONNECTION_STRING')
+    if connection_string and connection_string.strip():  # 检查不为空且不为空白字符串
         try:
             from opencensus.ext.azure.log_exporter import AzureLogHandler
             from opencensus.ext.azure.trace_exporter import AzureExporter
@@ -77,7 +78,7 @@ def init_azure_services(app):
             
             # 设置Azure Application Insights日志处理器
             azure_handler = AzureLogHandler(
-                connection_string=app.config['APPLICATIONINSIGHTS_CONNECTION_STRING']
+                connection_string=connection_string
             )
             azure_handler.setLevel(logging.INFO)
             app.logger.addHandler(azure_handler)
@@ -86,17 +87,39 @@ def init_azure_services(app):
             global azure_insights_middleware, app_insights_tracer
             azure_insights_middleware = FlaskMiddleware(
                 app,
-                exporter=AzureExporter(connection_string=app.config['APPLICATIONINSIGHTS_CONNECTION_STRING']),
+                exporter=AzureExporter(connection_string=connection_string),
                 sampler=ProbabilitySampler(rate=1.0),
             )
             app_insights_tracer = Tracer(
-                exporter=AzureExporter(connection_string=app.config['APPLICATIONINSIGHTS_CONNECTION_STRING']),
+                exporter=AzureExporter(connection_string=connection_string),
                 sampler=ProbabilitySampler(rate=1.0),
             )
             
             app.logger.info("Azure Application Insights initialized")
         except ImportError:
             app.logger.warning("Azure Application Insights 依赖未安装，跳过初始化")
+        except Exception as e:
+            app.logger.warning(f"Azure Application Insights 初始化失败: {e}")
+    else:
+        app.logger.info("Azure Application Insights 连接字符串未配置，跳过初始化")
+    
+    # 初始化Azure Key Vault (如果配置了)
+    key_vault_url = app.config.get('AZURE_KEY_VAULT_URL')
+    if key_vault_url and key_vault_url.strip():
+        try:
+            from azure.keyvault.secrets import SecretClient
+            from azure.identity import DefaultAzureCredential
+            
+            credential = DefaultAzureCredential()
+            client = SecretClient(vault_url=key_vault_url, credential=credential)
+            
+            app.logger.info("Azure Key Vault initialized")
+        except ImportError:
+            app.logger.warning("Azure Key Vault 依赖未安装，跳过初始化")
+        except Exception as e:
+            app.logger.warning(f"Azure Key Vault 初始化失败: {e}")
+    else:
+        app.logger.info("Azure Key Vault URL 未配置，跳过初始化")
     
     # 初始化Microsoft Entra ID
     if app.config.get('ENTRA_CLIENT_ID') and app.config.get('ENTRA_CLIENT_SECRET'):
