@@ -7,9 +7,10 @@ load_dotenv(os.path.join(basedir, '.env'))
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'hard-to-guess-string'
     
-    # 数据库配置 - 简化为SQLite，避免PostgreSQL连接问题
+    # 数据库配置 - 使用临时目录来避免中文字符问题
+    DATABASE_PATH = '/tmp/clarifai_db/clarifai.db'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(basedir, 'instance', 'clarifai.db')
+        f'sqlite:///{DATABASE_PATH}'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # 上传文件配置
@@ -48,7 +49,8 @@ class Config:
     @classmethod
     def init_app(cls, app):
         """基础配置初始化"""
-        pass
+        # 确保数据库目录存在
+        os.makedirs(os.path.dirname(cls.DATABASE_PATH), exist_ok=True)
 
 class DevelopmentConfig(Config):
     DEBUG = True
@@ -57,7 +59,8 @@ class DevelopmentConfig(Config):
 
 class TestingConfig(Config):
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'instance', 'test.db')
+    TEST_DATABASE_PATH = '/tmp/clarifai_db/test.db'
+    SQLALCHEMY_DATABASE_URI = f'sqlite:///{TEST_DATABASE_PATH}'
     WTF_CSRF_ENABLED = False
     USE_AZURE_STORAGE = False
 

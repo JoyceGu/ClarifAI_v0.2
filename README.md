@@ -1,378 +1,241 @@
-# ClarifAI - 智能任务管理平台
+# ClarifAI - 数据分析需求管理平台
 
-ClarifAI是一个基于Python Flask的任务管理平台，集成了Azure OpenAI能力，提供任务提交、验证、分配和跟踪功能。
+ClarifAI 是一个专为数据分析团队设计的需求管理平台，帮助产品经理和数据分析师更好地协作，管理数据分析任务和需求。
 
-## 核心功能
+## 主要功能
 
-1. **用户认证系统**
-   - 登录/注册
-   - 与Microsoft Entra ID集成（计划中）
+### 核心功能
+- **需求提交与管理**: 产品经理可以提交详细的数据分析需求
+- **任务分配**: 支持将任务分配给特定的数据分析师
+- **进度跟踪**: 实时跟踪任务状态和进度
+- **文件管理**: 支持上传和管理相关的数据文件和文档
+- **优先级管理**: 支持设置和管理任务优先级
 
-2. **任务管理**
-   - 提交新任务/需求
-   - 分配任务给团队成员
-   - 追踪分配给自己的任务
-   - 任务历史记录查看
+### 技术特性
+- **现代化界面**: 基于Bootstrap 5的响应式设计
+- **身份验证**: 支持本地用户认证和Microsoft Entra ID集成
+- **文件存储**: 支持本地文件存储和Azure Blob Storage
+- **数据库**: 使用SQLite数据库，易于部署和维护
+- **RESTful API**: 提供完整的API接口
 
-3. **智能任务验证**
-   - 使用Azure OpenAI验证任务的清晰度/可行性
-   - 检查是否存在类似案例（通过知识库API）
+## 快速开始
 
-4. **文件管理**
-   - 文件上传/存储空间
-   - 文件探索和管理界面
+### 环境要求
+- Python 3.9+
+- Flask 2.0+
+- SQLAlchemy
+- 其他依赖见 `requirements.txt`
 
-## 技术栈
+### 安装步骤
 
-- **后端**: Python Flask
-- **前端**: HTML, CSS, JavaScript (Bootstrap)
-- **数据库**: SQLite (开发), PostgreSQL (生产)
-- **认证**: Flask-Login (本地), Microsoft Entra ID (Azure部署)
-- **AI集成**: Azure OpenAI
-- **云部署**: Azure App Service
-
-## 安装说明
-
-1. 克隆代码库
-
+1. **克隆项目**
 ```bash
-git clone [repository-url]
+git clone <repository-url>
 cd ClarifAI_v0.2
 ```
 
-2. 创建并激活虚拟环境
-
+2. **创建虚拟环境**
 ```bash
 python -m venv venv
-source venv/bin/activate  # MacOS/Linux
-# 或者
+source venv/bin/activate  # Linux/Mac
+# 或
 venv\Scripts\activate  # Windows
 ```
 
-3. 安装依赖
-
+3. **安装依赖**
 ```bash
 pip install -r requirements.txt
 ```
 
-4. 初始化数据库
-
+4. **初始化数据库**
 ```bash
-flask db init
-flask db migrate
-flask db upgrade
+python simple_init.py
 ```
 
-5. 运行应用
-
+5. **启动应用**
 ```bash
-flask run --port=8000
+# 推荐使用启动脚本（自动处理数据库路径问题）
+./start_app.sh
+
+# 或者手动设置环境变量
+DATABASE_URL="sqlite:////tmp/clarifai_db/clarifai.db" python app.py
 ```
 
-6. 在浏览器中访问应用
+6. **访问应用**
+打开浏览器访问: http://localhost:8000
 
-```
-http://localhost:8000
-```
+### 测试账号
+- **PM账号**: pm@test.com / password123
+- **Researcher账号**: researcher@test.com / password123
+
+## 重要说明
+
+### 数据库路径问题
+由于项目路径包含中文字符，SQLAlchemy可能无法正确访问数据库文件。我们提供了以下解决方案：
+
+1. **使用启动脚本**: `./start_app.sh` (推荐)
+2. **手动设置环境变量**: 
+   ```bash
+   export DATABASE_URL="sqlite:////tmp/clarifai_db/clarifai.db"
+   python app.py
+   ```
+
+数据库文件会自动复制到 `/tmp/clarifai_db/` 目录中，避免中文路径问题。
 
 ## 项目结构
 
 ```
-ClarifAI/
-├── app/
-│   ├── __init__.py
-│   ├── models/
-│   ├── routes/
-│   ├── static/
-│   │   ├── css/
-│   │   ├── js/
-│   │   └── images/
-│   ├── templates/
-│   └── utils/
-├── migrations/
-├── instance/
-├── venv/
-├── .gitignore
-├── config.py
-├── requirements.txt
-└── README.md
+ClarifAI_v0.2/
+├── app/                    # 应用主目录
+│   ├── __init__.py        # 应用初始化
+│   ├── models/            # 数据模型
+│   │   ├── __init__.py
+│   │   ├── user.py        # 用户模型
+│   │   ├── task.py        # 任务模型
+│   │   └── file.py        # 文件模型
+│   ├── routes/            # 路由处理
+│   │   ├── auth.py        # 认证路由
+│   │   ├── main.py        # 主页路由
+│   │   ├── tasks.py       # 任务路由
+│   │   ├── files.py       # 文件路由
+│   │   └── errors.py      # 错误处理
+│   ├── templates/         # HTML模板
+│   ├── static/           # 静态资源
+│   └── utils/            # 工具函数
+├── instance/             # 实例配置和数据库
+├── migrations/           # 数据库迁移文件
+├── config.py            # 配置文件
+├── app.py              # 应用入口
+├── simple_init.py      # 数据库初始化脚本
+├── start_app.sh        # 应用启动脚本
+├── requirements.txt    # Python依赖
+└── README.md          # 项目文档
 ```
 
-## Azure部署指南
+## 配置说明
 
-### 前提条件
+### 基础配置
+应用支持多种环境配置：
+- `development`: 开发环境（默认）
+- `testing`: 测试环境
+- `production`: 生产环境
 
-1. Azure账户
-2. 已安装Azure CLI
-3. 本地已配置的项目
+### 环境变量
+- `FLASK_CONFIG`: 指定配置环境
+- `DATABASE_URL`: 数据库连接URL
+- `SECRET_KEY`: Flask密钥
+- `AZURE_*`: Azure服务配置（可选）
+- `ENTRA_*`: Microsoft Entra ID配置（可选）
 
-### 部署步骤
+### Azure集成（可选）
+应用支持与Azure服务集成：
+- **Azure Blob Storage**: 文件存储
+- **Azure Application Insights**: 应用监控
+- **Azure Key Vault**: 密钥管理
+- **Microsoft Entra ID**: 身份认证
 
-#### 1. 配置Azure服务
+## API文档
 
-运行提供的部署脚本，创建所需Azure资源：
+### 认证端点
+- `GET /auth/login` - 登录页面
+- `POST /auth/login` - 用户登录
+- `GET /auth/logout` - 用户登出
+- `GET /auth/callback` - Microsoft认证回调
 
-```bash
-# 确保脚本有执行权限
-chmod +x deploy_to_azure.sh
-# 运行部署脚本
-./deploy_to_azure.sh
-```
+### 任务管理
+- `GET /tasks` - 任务列表
+- `GET /tasks/create` - 创建任务页面
+- `POST /tasks/create` - 提交新任务
+- `GET /tasks/<id>` - 查看任务详情
+- `POST /tasks/<id>/update` - 更新任务状态
 
-这个脚本会自动创建以下Azure资源：
-- 资源组
-- Azure SQL Server和数据库
-- Azure Blob Storage
-- Application Insights
-- Azure Key Vault
-- App Service Plan
-- Web App
-
-#### 2. 准备部署包
-
-运行以下命令创建部署包：
-
-```bash
-# 确保脚本有执行权限
-chmod +x prepare_deploy_package.sh
-# 创建部署包
-./prepare_deploy_package.sh
-```
-
-#### 3. 部署应用程序
-
-```bash
-# 替换为您的资源组和应用名称
-RESOURCE_GROUP="clarifai-resources"
-APP_NAME="clarifai-app"
-
-# 部署到Azure
-az webapp deployment source config-zip --resource-group $RESOURCE_GROUP --name $APP_NAME --src deployment/clarifai_app.zip
-```
-
-#### 4. 配置Azure OpenAI和Microsoft Entra ID
-
-1. **Azure OpenAI配置**
-
-   在Azure Portal中创建Azure OpenAI资源，然后更新应用设置：
-   
-   ```bash
-   az webapp config appsettings set \
-       --name $APP_NAME \
-       --resource-group $RESOURCE_GROUP \
-       --settings \
-       AZURE_OPENAI_API_KEY="your-api-key" \
-       AZURE_OPENAI_ENDPOINT="https://your-resource-name.openai.azure.com/" \
-       AZURE_OPENAI_DEPLOYMENT_NAME="gpt-4o-mini" \
-       AZURE_OPENAI_API_VERSION="2025-04-15"
-   ```
-
-2. **Microsoft Entra ID配置**
-
-   在Azure Portal的Entra ID中注册新应用，然后更新应用设置：
-   
-   ```bash
-   az webapp config appsettings set \
-       --name $APP_NAME \
-       --resource-group $RESOURCE_GROUP \
-       --settings \
-       ENTRA_CLIENT_ID="your-client-id" \
-       ENTRA_CLIENT_SECRET="your-client-secret" \
-       ENTRA_TENANT_ID="your-tenant-id" \
-       ENTRA_REDIRECT_PATH="/auth/callback"
-   ```
-
-#### 5. 完成部署
-
-部署完成后，您可以访问Azure Web App URL查看您的应用：
-
-```
-https://clarifai-app.azurewebsites.net
-```
-
-#### 6. 部署后操作
-
-1. 运行数据库迁移（这在启动脚本中已自动执行）
-2. 通过Azure Portal监控应用性能
-
-### 故障排除
-
-1. **查看应用日志**：
-   ```bash
-   az webapp log tail --name $APP_NAME --resource-group $RESOURCE_GROUP
-   ```
-
-2. **检查部署状态**：
-   ```bash
-   az webapp deployment list --name $APP_NAME --resource-group $RESOURCE_GROUP
-   ```
-
-3. **重启应用**：
-   ```bash
-   az webapp restart --name $APP_NAME --resource-group $RESOURCE_GROUP
-   ```
-
-## 开发路线图
-
-1. 基础功能实现（认证、任务管理、文件上传）
-2. Azure OpenAI集成
-3. Microsoft Entra ID集成
-4. 知识库API集成
-5. Azure部署配置
-
-## 测试账号
-
-- PM: pm@test.com / password123
-- Researcher: researcher@test.com / password123
+### 文件管理
+- `POST /files/upload` - 上传文件
+- `GET /files/<id>` - 下载文件
+- `DELETE /files/<id>` - 删除文件
 
 ## 故障排除
 
-### 常见问题及解决方案
+### 常见问题
 
-#### 1. Azure连接字符串错误
-**问题**: 启动时出现 "Invalid connection string" 错误
-```
-ValueError: Invalid connection string
-```
+1. **数据库连接错误**
+   - 确保使用启动脚本或正确设置环境变量
+   - 检查 `/tmp/clarifai_db/` 目录权限
 
-**解决方案**: 
-- 确保.env文件中的Azure服务连接字符串是有效的，或者将其注释掉
-- 对于本地开发环境，可以将以下配置注释掉：
-  ```bash
-  #APPLICATIONINSIGHTS_CONNECTION_STRING=
-  #AZURE_KEY_VAULT_URL=
-  ```
+2. **端口占用**
+   ```bash
+   lsof -i :8000
+   kill <PID>
+   ```
 
-#### 2. 端口被占用
-**问题**: 启动时提示"Address already in use"
-```
-Port 8000 is in use by another program
-```
+3. **依赖问题**
+   ```bash
+   pip install --upgrade -r requirements.txt
+   ```
 
-**解决方案**:
+4. **重新初始化数据库**
+   ```bash
+   python simple_init.py
+   ```
+
+### 日志调试
+应用在开发模式下会显示详细的错误信息。生产环境可配置Azure Application Insights进行监控。
+
+## 开发指南
+
+### 添加新功能
+1. 在相应的模块中添加模型、路由和模板
+2. 更新数据库模式（如需要）
+3. 添加相应的测试
+4. 更新文档
+
+### 数据库迁移
 ```bash
-# 查找占用端口的进程
-lsof -i :8000
-# 终止进程（将PID替换为实际的进程ID）
-kill <PID>
-```
-
-#### 3. Python命令未找到
-**问题**: 运行python命令时提示"command not found"
-
-**解决方案**:
-- 确保虚拟环境已激活
-- 在macOS上使用python3代替python：
-  ```bash
-  python3 app.py
-  ```
-
-#### 4. 依赖包安装失败
-**问题**: pip install失败或包版本冲突
-
-**解决方案**:
-```bash
-# 升级pip
-pip install --upgrade pip
-# 清理缓存并重新安装
-pip cache purge
-pip install -r requirements.txt --force-reinstall
-```
-
-#### 5. 数据库初始化问题
-**问题**: 数据库相关错误
-
-**解决方案**:
-```bash
-# 初始化数据库
+# 初始化迁移（仅首次）
 flask db init
-flask db migrate -m "Initial migration"
+
+# 生成迁移文件
+flask db migrate -m "描述"
+
+# 应用迁移
 flask db upgrade
-
-# 创建初始用户
-flask init-db
 ```
 
-#### 6. GitHub push被阻止 - 检测到敏感信息
-**问题**: push时出现"Repository rule violations found"错误
-```
-Push cannot contain secrets - Azure OpenAI Key
-```
-
-**解决方案**:
+### 测试
 ```bash
-# 方法1: 删除包含敏感信息的文件
-rm .env.backup  # 或其他包含密钥的文件
+# 运行测试
+python -m pytest tests/
 
-# 方法2: 如果敏感信息在Git历史中，需要重写历史
-git filter-branch --force --index-filter 'git rm --cached --ignore-unmatch .env.backup' --prune-empty --tag-name-filter cat -- --all
-
-# 强制push（注意：这会重写远程历史）
-git push origin branch-name --force
+# 代码覆盖率
+python -m pytest --cov=app tests/
 ```
 
-#### 7. Azure部署认证失败
-**问题**: push到Azure时出现"Authentication failed"
+## 部署
 
-**解决方案**:
-```bash
-# 获取Azure部署凭据
-az webapp deployment list-publishing-profiles --name your-app-name --resource-group your-resource-group
+### 本地部署
+使用提供的启动脚本即可在本地运行。
 
-# 或者使用Azure CLI登录
-az login
+### 生产部署
+1. 设置 `FLASK_CONFIG=production`
+2. 配置适当的数据库（PostgreSQL推荐）
+3. 设置Azure服务（推荐）
+4. 使用WSGI服务器（如Gunicorn）
 
-# 设置部署用户
-az webapp deployment user set --user-name your-username --password your-password
-```
+### Azure部署
+项目包含Azure部署配置文件，支持直接部署到Azure App Service。
 
-#### 8. Gunicorn命令未找到
-**问题**: 运行gunicorn时提示"command not found"
+## 贡献
 
-**解决方案**:
-```bash
-# 确保虚拟环境已激活
-source venv/bin/activate
+欢迎提交Issue和Pull Request来改进项目。
 
-# 重新安装gunicorn
-pip install gunicorn==21.2.0
+## 许可证
 
-# 验证安装
-gunicorn --version
-```
+[MIT License](LICENSE)
 
-### 开发环境配置
+## 联系方式
 
-确保您的.env文件包含以下最小配置：
-```bash
-SECRET_KEY=your-secret-key-here
-DATABASE_URL=sqlite:///instance/clarifai.db
-UPLOAD_FOLDER=app/static/uploads
-MAX_CONTENT_LENGTH=16777216
-USE_AZURE_STORAGE=false
-LOG_TO_STDOUT=false
-```
+如有问题或建议，请通过Issue联系我们。
 
-### 启动应用的正确步骤
+---
 
-1. **激活虚拟环境**:
-   ```bash
-   source venv/bin/activate  # macOS/Linux
-   ```
-
-2. **安装依赖**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **配置环境变量**:
-   - 复制 `env.example` 到 `.env`
-   - 根据需要修改配置
-
-4. **启动应用**:
-   ```bash
-   python3 app.py
-   ```
-
-5. **访问应用**:
-   打开浏览器访问 `http://localhost:8000`
+**注意**: 这是一个开发版本，某些功能可能还在完善中。生产使用前请进行充分测试。
